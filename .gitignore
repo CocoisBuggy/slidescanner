@@ -1,0 +1,7 @@
+sdk
+./EDSDK/Library
+build
+python-reference
+test_build
+.cache
+**__pycache__
