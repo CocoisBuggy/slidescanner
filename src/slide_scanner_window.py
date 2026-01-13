@@ -220,7 +220,6 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         while self.live_view_running and self.shared_state.camera:
             try:
                 data = self.shared_state.camera_manager.download_evf_image()
-                print(f"Downloaded {len(data)} bytes")
                 GLib.idle_add(self.update_live_view_image, data)
             except Exception as e:
                 print(f"Live view error: {e}")
@@ -235,7 +234,6 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
             pixbuf = loader.get_pixbuf()
             if pixbuf:
                 self.live_view_image.set_pixbuf(pixbuf)
-                print(f"Updated image {pixbuf.get_width()}x{pixbuf.get_height()}")
             else:
                 print("Pixbuf is None")
         except Exception as e:
