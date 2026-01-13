@@ -1,6 +1,11 @@
 import threading
 import time
-from gi.repository import GLib, GdkPixbuf, Gtk  # noqa: E402
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+
+from gi.repository import GLib, Gdk, GdkPixbuf, Gtk  # noqa: E402
 
 
 class SlideScannerWindow(Gtk.ApplicationWindow):
@@ -22,6 +27,50 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
 
         self.shared_state.connect("camera-name", self.on_camera_name_changed)
         self.on_camera_name_changed(self.shared_state, self.shared_state.camera_name)
+
+        # Set up keyboard shortcuts
+        self.setup_shortcuts()
+
+    def setup_shortcuts(self):
+        """Set up keyboard shortcuts for ctrl+key combinations."""
+        # Connect key press event
+        key_controller = Gtk.EventControllerKey()
+        key_controller.connect("key-pressed", self.on_key_pressed)
+        self.add_controller(key_controller)
+
+        # Define shortcut mappings (key -> function)
+        self.shortcuts = {
+            'c': self.capture_image,      # Ctrl+C
+            's': self.open_settings,      # Ctrl+S
+            'q': self.quit_application,   # Ctrl+Q
+        }
+
+    def on_key_pressed(self, controller, keyval, keycode, state):
+        """Handle key press events for shortcuts."""
+        # Check if Ctrl is pressed
+        if state & Gdk.ModifierType.CONTROL_MASK:
+            # Convert keyval to key name
+            key_name = Gdk.keyval_name(keyval).lower()
+            if key_name in self.shortcuts:
+                self.shortcuts[key_name]()
+                return True  # Event handled
+        return False  # Event not handled
+
+    def capture_image(self):
+        """Handle Ctrl+C: Capture image."""
+        print("Capture image shortcut triggered")
+        # TODO: Implement actual capture functionality
+        # For now, just print a message
+
+    def open_settings(self):
+        """Handle Ctrl+S: Open settings."""
+        print("Open settings shortcut triggered")
+        # TODO: Implement settings dialog
+
+    def quit_application(self):
+        """Handle Ctrl+Q: Quit application."""
+        print("Quit application shortcut triggered")
+        self.get_application().quit()
 
     def create_header_bar(self):
         header_bar = Gtk.HeaderBar()
