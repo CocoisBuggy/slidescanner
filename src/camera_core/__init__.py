@@ -78,7 +78,7 @@ edsdk.EdsSetPropertyEventHandler.argtypes = [
     EdsCameraRef,
     EdsPropertyEvent,
     EdsPropertyEventHandler,
-    ctypes.c_void_p,
+    ctypes.py_object,
 ]
 edsdk.EdsGetPropertyData.restype = EdsError
 edsdk.EdsGetPropertyData.argtypes = [

@@ -40,11 +40,12 @@ def _property_callback(event, property_id: int, param, context):
 
     # manager = ctypes.cast(context, ctypes.py_object).value
 
-    if property_id not in waiting:
+    key = EdsPropertyIDEnum(property_id)
+    if key not in waiting:
         print(f"No one is waiting on the result from {property_id}")
         return EDS_ERR_OK
 
-    waiting[property_id].set()
+    waiting[key].set()
     return EDS_ERR_OK
 
 
@@ -172,7 +173,7 @@ class CameraManager:
 
     @needs_sdk
     def set_property_value(self, property_id: EdsPropertyIDEnum, value):
-        waiting[property_id]
+        waiting[property_id] = Event()
 
         err = edsdk.EdsSetPropertyData(
             self.camera,
@@ -185,7 +186,12 @@ class CameraManager:
         if err != EDS_ERR_OK:
             raise CameraException(err)
 
-        waiting[property_id].wait(5)
+        res = waiting[property_id].wait(2)
+        del waiting[property_id]
+        if not res:
+            raise CameraException(f"Timeout for setting property {property_id}")
+
+        return True
 
     @needs_sdk
     def start_live_view(self):
