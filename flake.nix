@@ -25,7 +25,7 @@
           wheel
 
           # GTK4 Python bindings
-          pygobject
+          pygobject3
           pycairo
 
           # C++/Python binding tools
@@ -49,7 +49,7 @@
           pango
           cairo
           python3
-          python3.pkgs.pygobject
+          python3.pkgs.pygobject3
 
           # C++ development tools for Python bindings
           gcc
