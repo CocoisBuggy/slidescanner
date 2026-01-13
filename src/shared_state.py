@@ -35,4 +35,5 @@ class SharedState(GObject.Object):
         if dev_info is None:
             raise Exception("We really expected dev info")
 
-        self.camera_name = dev_info.name
+        self.camera_name = dev_info.szDeviceDescription.decode("utf8")
+        print(f"Active camera name: {self.camera_name}")
