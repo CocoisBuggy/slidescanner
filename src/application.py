@@ -1,4 +1,3 @@
-from os import eventfd
 import time
 from threading import Event, Thread
 import gi
@@ -43,11 +42,11 @@ class SlideScannerApplication(Gtk.Application):
             print("Starting camera watcher")
 
             while self.camera_manager.initialized.is_set() and self.running.is_set():
-                if self.state.camera is not None:
-                    time.sleep(1)
-                    continue
+                time.sleep(0.05)
 
-                time.sleep(0.2)
+                if self.state.camera is not None:
+                    # We have a camera, we chilling.
+                    continue
 
                 if not self.camera_manager.get_camera_count():
                     continue
@@ -61,7 +60,7 @@ class SlideScannerApplication(Gtk.Application):
 
                 self.state.set_camera(camera)
 
-        win = SlideScannerWindow(application=self)
+        win = SlideScannerWindow(self.state, application=self)
 
         self.camera_watcher = Thread(target=camera_watcher, daemon=True)
         self.camera_watcher.start()

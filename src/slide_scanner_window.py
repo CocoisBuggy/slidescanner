@@ -2,15 +2,21 @@ from gi.repository import Gtk  # noqa: E402
 
 
 class SlideScannerWindow(Gtk.ApplicationWindow):
-    def __init__(self, **kwargs):
+    def __init__(self, shared_state, **kwargs):
         super().__init__(**kwargs)
+        self.shared_state = shared_state
         self.set_title("Slide Scanner")
         self.set_default_size(800, 600)
 
         self.camera_info_label = None
+        self.iso_spin = None
+        self.shutter_spin = None
 
         self.create_header_bar()
         self.create_main_content()
+
+        self.shared_state.connect("camera-name", self.on_camera_name_changed)
+        self.on_camera_name_changed(self.shared_state, self.shared_state.camera_name)
 
     def create_header_bar(self):
         header_bar = Gtk.HeaderBar()
@@ -104,37 +110,37 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         left_panel.append(camera_info_frame)
 
         self.camera_info_label = Gtk.Label(label="No camera connected")
-        self.camera_info_label.set_margin_top(6)
-        self.camera_info_label.set_margin_bottom(6)
-        self.camera_info_label.set_margin_start(6)
-        self.camera_info_label.set_margin_end(6)
+        self.camera_info_label.set_margin_top(12)
+        self.camera_info_label.set_margin_bottom(12)
+        self.camera_info_label.set_margin_start(12)
+        self.camera_info_label.set_margin_end(12)
         camera_info_frame.set_child(self.camera_info_label)
 
         controls_frame = Gtk.Frame(label="Controls")
         left_panel.append(controls_frame)
 
-        controls_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        controls_box.set_margin_top(6)
-        controls_box.set_margin_bottom(6)
-        controls_box.set_margin_start(6)
-        controls_box.set_margin_end(6)
+        controls_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        controls_box.set_margin_top(12)
+        controls_box.set_margin_bottom(12)
+        controls_box.set_margin_start(12)
+        controls_box.set_margin_end(12)
         controls_frame.set_child(controls_box)
 
         iso_label = Gtk.Label(label="ISO:")
         controls_box.append(iso_label)
 
-        iso_spin = Gtk.SpinButton()
-        iso_spin.set_range(100, 3200)
-        iso_spin.set_value(400)
-        controls_box.append(iso_spin)
+        self.iso_spin = Gtk.SpinButton()
+        self.iso_spin.set_range(100, 3200)
+        self.iso_spin.set_value(400)
+        controls_box.append(self.iso_spin)
 
         shutter_label = Gtk.Label(label="Shutter Speed:")
         controls_box.append(shutter_label)
 
-        shutter_spin = Gtk.SpinButton()
-        shutter_spin.set_range(1, 1000)
-        shutter_spin.set_value(125)
-        controls_box.append(shutter_spin)
+        self.shutter_spin = Gtk.SpinButton()
+        self.shutter_spin.set_range(1, 1000)
+        self.shutter_spin.set_value(125)
+        controls_box.append(self.shutter_spin)
 
         return left_panel
 
@@ -176,3 +182,13 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         status_bar.append(status_label)
 
         return status_bar
+
+    def on_camera_name_changed(self, shared_state, camera_name):
+        if camera_name:
+            self.camera_info_label.set_text(camera_name)
+            self.iso_spin.set_sensitive(True)
+            self.shutter_spin.set_sensitive(True)
+        else:
+            self.camera_info_label.set_text("No camera connected")
+            self.iso_spin.set_sensitive(False)
+            self.shutter_spin.set_sensitive(False)

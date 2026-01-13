@@ -28,12 +28,13 @@ class SharedState(GObject.Object):
 
         if self.camera is None:
             self.camera_name = None
-            return
+        else:
+            dev_info = self.camera_manager.get_device_info(cam)
 
-        dev_info = self.camera_manager.get_device_info(cam)
+            if dev_info is None:
+                raise Exception("We really expected dev info")
 
-        if dev_info is None:
-            raise Exception("We really expected dev info")
+            self.camera_name = dev_info.szDeviceDescription.decode("utf8")
+            print(f"Active camera name: {self.camera_name}")
 
-        self.camera_name = dev_info.szDeviceDescription.decode("utf8")
-        print(f"Active camera name: {self.camera_name}")
+        self.emit("camera-name", self.camera_name)
