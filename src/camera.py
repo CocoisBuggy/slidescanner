@@ -14,11 +14,7 @@ lib_path = os.path.join(
     "x86_64",
     "libEDSDK.so",
 )
-try:
-    edsdk = ctypes.CDLL(lib_path)
-except OSError as e:
-    print(f"Failed to load EDSDK library: {e}")
-    edsdk = None
+edsdk = ctypes.CDLL(lib_path)
 
 # Define types
 EdsError = ctypes.c_uint32
