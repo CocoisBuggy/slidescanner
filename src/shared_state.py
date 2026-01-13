@@ -29,6 +29,10 @@ class SharedState(GObject.Object):
         if self.camera is None:
             self.camera_name = None
         else:
+            self.camera_manager.open_session(cam)
+            self.camera_manager.set_property_event_handler()
+            self.camera_manager.start_live_view()
+
             dev_info = self.camera_manager.get_device_info(cam)
 
             if dev_info is None:

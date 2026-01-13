@@ -1,4 +1,6 @@
-from gi.repository import Gtk  # noqa: E402
+import threading
+import time
+from gi.repository import GLib, GdkPixbuf, Gtk  # noqa: E402
 
 
 class SlideScannerWindow(Gtk.ApplicationWindow):
@@ -11,6 +13,9 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         self.camera_info_label = None
         self.iso_spin = None
         self.shutter_spin = None
+        self.live_view_image = None
+        self.live_view_thread = None
+        self.live_view_running = False
 
         self.create_header_bar()
         self.create_main_content()
@@ -164,10 +169,10 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         preview_box.set_margin_end(6)
         preview_frame.set_child(preview_box)
 
-        preview_label = Gtk.Label(label="Camera preview will appear here")
-        preview_label.set_vexpand(True)
-        preview_label.set_valign(Gtk.Align.CENTER)
-        preview_box.append(preview_label)
+        self.live_view_image = Gtk.Image()
+        self.live_view_image.set_vexpand(True)
+        self.live_view_image.set_valign(Gtk.Align.CENTER)
+        preview_box.append(self.live_view_image)
 
         return right_panel
 
@@ -188,7 +193,41 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
             self.camera_info_label.set_text(camera_name)
             self.iso_spin.set_sensitive(True)
             self.shutter_spin.set_sensitive(True)
+            self.start_live_view()
         else:
             self.camera_info_label.set_text("No camera connected")
             self.iso_spin.set_sensitive(False)
             self.shutter_spin.set_sensitive(False)
+            self.stop_live_view()
+
+    def start_live_view(self):
+        if self.live_view_thread and self.live_view_thread.is_alive():
+            return
+        self.live_view_running = True
+        self.live_view_thread = threading.Thread(
+            target=self.live_view_loop, daemon=True
+        )
+        self.live_view_thread.start()
+
+    def stop_live_view(self):
+        self.live_view_running = False
+        if self.live_view_thread:
+            self.live_view_thread.join(timeout=1)
+            self.live_view_thread = None
+
+    def live_view_loop(self):
+        while self.live_view_running and self.shared_state.camera:
+            try:
+                data = self.shared_state.camera_manager.download_evf_image()
+                GLib.idle_add(self.update_live_view_image, data)
+            except Exception as e:
+                print(f"Live view error: {e}")
+                time.sleep(1)
+            time.sleep(0.1)
+
+    def update_live_view_image(self, data):
+        loader = GdkPixbuf.PixbufLoader()
+        loader.write(data)
+        loader.close()
+        pixbuf = loader.get_pixbuf()
+        self.live_view_image.set_from_pixbuf(pixbuf)

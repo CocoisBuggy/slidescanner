@@ -1,18 +1,19 @@
 import ctypes
-from threading import Event
+import time
+from threading import Event, Thread
 from .camera_core import (
     EDS_ERR_OK,
     CameraException,
     kEdsPropertyEvent_PropertyChanged,
-    kEdsPropID_ISOSpeed,
-    kEdsPropID_Av,
-    kEdsPropID_Tv,
     edsdk,
     EdsCameraListRef,
     EdsUInt32,
     EdsCameraRef,
     EdsDeviceInfo,
     EdsPropertyEventHandler,
+    EdsEvfImageRef,
+    EdsStreamRef,
+    EdsPropertyIDEnum,
 )
 
 
@@ -26,21 +27,24 @@ def needs_sdk(inner):
     return wrapper
 
 
+waiting: dict[EdsPropertyIDEnum, Event] = {}
+
+
 # Property change callback
-def _property_callback(event, property_id, param, context):
-    manager = ctypes.cast(context, ctypes.py_object).value
-    if event == kEdsPropertyEvent_PropertyChanged:
-        if property_id == kEdsPropID_ISOSpeed:
-            iso_value = manager.get_property_value(property_id)
-            print(f"ISO changed to: {iso_value}")
-        elif property_id == kEdsPropID_Av:
-            av_value = manager.get_property_value(property_id)
-            print(f"Aperture changed to: {av_value}")
-        elif property_id == kEdsPropID_Tv:
-            tv_value = manager.get_property_value(property_id)
-            print(f"Shutter speed changed to: {tv_value}")
-        else:
-            print(f"Property {property_id} changed")
+def _property_callback(event, property_id: int, param, context):
+    global waiting
+
+    print(
+        f"Got property change from camera: {event}, {property_id}, {param}, {context}"
+    )
+
+    # manager = ctypes.cast(context, ctypes.py_object).value
+
+    if property_id not in waiting:
+        print(f"No one is waiting on the result from {property_id}")
+        return EDS_ERR_OK
+
+    waiting[property_id].set()
     return EDS_ERR_OK
 
 
@@ -51,6 +55,11 @@ class CameraManager:
         self.camera_list = None
         self.camera = None
         self.initialized = Event()
+
+        Thread(target=self._property_event)
+
+    def _property_event(self):
+        pass
 
     def _edsdk_available(self):
         return edsdk is not None
@@ -160,3 +169,67 @@ class CameraManager:
         if err == EDS_ERR_OK:
             return value.value
         return None
+
+    @needs_sdk
+    def set_property_value(self, property_id: EdsPropertyIDEnum, value):
+        waiting[property_id]
+
+        err = edsdk.EdsSetPropertyData(
+            self.camera,
+            property_id.value,
+            0,
+            ctypes.sizeof(EdsUInt32),
+            ctypes.byref(EdsUInt32(value)),
+        )
+
+        if err != EDS_ERR_OK:
+            raise CameraException(err)
+
+        waiting[property_id].wait(5)
+
+    @needs_sdk
+    def start_live_view(self):
+        # Set output device to PC
+        self.set_property_value(EdsPropertyIDEnum.Evf_OutputDevice, 1)
+        # Set mode to on
+        self.set_property_value(EdsPropertyIDEnum.Evf_Mode, 1)
+        time.sleep(1)  # Wait for live view to start
+
+    @needs_sdk
+    def download_evf_image(self):
+        evf_image = EdsEvfImageRef()
+        err = edsdk.EdsCreateEvfImageRef(ctypes.byref(evf_image))
+        if err != EDS_ERR_OK:
+            raise CameraException(err)
+
+        err = edsdk.EdsDownloadEvfImage(self.camera, evf_image)
+        if err != EDS_ERR_OK:
+            edsdk.EdsRelease(evf_image)
+            raise CameraException(err)
+
+        # Create memory stream
+        stream = EdsStreamRef()
+        err = edsdk.EdsCreateMemoryStream(0, ctypes.byref(stream))
+        if err != EDS_ERR_OK:
+            edsdk.EdsRelease(evf_image)
+            raise CameraException(err)
+
+        # Download the image data to stream
+        err = edsdk.EdsDownload(evf_image, stream)
+        if err != EDS_ERR_OK:
+            edsdk.EdsRelease(stream)
+            edsdk.EdsRelease(evf_image)
+            raise CameraException(err)
+
+        # Get data
+        pointer = ctypes.c_void_p()
+        length = EdsUInt32()
+        edsdk.EdsGetPointer(stream, ctypes.byref(pointer))
+        edsdk.EdsGetLength(stream, ctypes.byref(length))
+
+        data = ctypes.string_at(pointer, length.value)
+
+        edsdk.EdsRelease(stream)
+        edsdk.EdsRelease(evf_image)
+
+        return data
