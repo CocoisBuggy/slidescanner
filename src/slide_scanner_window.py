@@ -169,9 +169,10 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         preview_box.set_margin_end(6)
         preview_frame.set_child(preview_box)
 
-        self.live_view_image = Gtk.Image()
+        self.live_view_image = Gtk.Picture()
         self.live_view_image.set_vexpand(True)
-        self.live_view_image.set_valign(Gtk.Align.CENTER)
+        self.live_view_image.set_hexpand(True)
+        self.live_view_image.set_content_fit(Gtk.ContentFit.COVER)
         preview_box.append(self.live_view_image)
 
         return right_panel
@@ -233,7 +234,7 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
             loader.close()
             pixbuf = loader.get_pixbuf()
             if pixbuf:
-                self.live_view_image.set_from_pixbuf(pixbuf)
+                self.live_view_image.set_pixbuf(pixbuf)
                 print(f"Updated image {pixbuf.get_width()}x{pixbuf.get_height()}")
             else:
                 print("Pixbuf is None")
