@@ -22,11 +22,20 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         self.live_view_thread = None
         self.live_view_running = False
 
+        # Cassette context UI elements
+        self.cassette_name_entry = None
+        self.cassette_date_entry = None
+        self.slide_label_entry = None
+        self.quality_label = None
+
         self.create_header_bar()
         self.create_main_content()
 
         self.shared_state.connect("camera-name", self.on_camera_name_changed)
         self.on_camera_name_changed(self.shared_state, self.shared_state.camera_name)
+
+        self.shared_state.connect("cassette-context-changed", self.on_cassette_context_changed)
+        self.on_cassette_context_changed(self.shared_state)
 
         # Set up keyboard shortcuts
         self.setup_shortcuts()
@@ -43,6 +52,13 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
             'c': self.capture_image,      # Ctrl+C
             's': self.open_settings,      # Ctrl+S
             'q': self.quit_application,   # Ctrl+Q
+            'n': self.next_cassette,      # Ctrl+N
+        }
+
+        # Numpad shortcuts for quality rating (these will be handled separately)
+        self.numpad_shortcuts = {
+            'KP_1': 1, 'KP_2': 2, 'KP_3': 3, 'KP_4': 4, 'KP_5': 5,
+            '1': 1, '2': 2, '3': 3, '4': 4, '5': 5  # Regular number keys as fallback
         }
 
     def on_key_pressed(self, controller, keyval, keycode, state):
@@ -54,12 +70,25 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
             if key_name in self.shortcuts:
                 self.shortcuts[key_name]()
                 return True  # Event handled
+        else:
+            # Check for numpad shortcuts (no modifier required)
+            key_name = Gdk.keyval_name(keyval)
+            if key_name in self.numpad_shortcuts:
+                rating = self.numpad_shortcuts[key_name]
+                self.set_quality_rating(rating)
+                return True  # Event handled
         return False  # Event not handled
 
     def capture_image(self):
         """Handle Ctrl+C: Capture image."""
         print("Capture image shortcut triggered")
         # TODO: Implement actual capture functionality
+        # When implemented, this should include cassette context metadata:
+        # - Cassette name: self.shared_state.cassette_name
+        # - Cassette date: self.shared_state.cassette_date
+        # - Slide label: self.shared_state.slide_label
+        # - Quality rating: self.shared_state.quality_rating
+        # These should be written to EXIF metadata
         # For now, just print a message
 
     def open_settings(self):
@@ -72,18 +101,35 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         print("Quit application shortcut triggered")
         self.get_application().quit()
 
+    def next_cassette(self):
+        """Handle Ctrl+N: Move to next cassette."""
+        print("Next cassette shortcut triggered")
+        self.shared_state.next_cassette()
+
+    def set_quality_rating(self, rating):
+        """Set quality rating (1-5 stars)."""
+        print(f"Setting quality rating to {rating} stars")
+        self.shared_state.set_quality_rating(rating)
+
     def show_shortcuts_dialog(self):
         """Display a dialog showing all available keyboard shortcuts."""
         # Dynamically generate shortcuts text from the shortcuts dictionary
-        shortcut_descriptions = {
+        ctrl_shortcut_descriptions = {
             'c': 'Capture Image',
             's': 'Open Settings',
-            'q': 'Quit Application'
+            'q': 'Quit Application',
+            'n': 'Next Cassette'
         }
 
         shortcuts_lines = ["Available Keyboard Shortcuts:"]
-        for key, description in shortcut_descriptions.items():
+        shortcuts_lines.append("")
+        shortcuts_lines.append("Ctrl+Key shortcuts:")
+        for key, description in ctrl_shortcut_descriptions.items():
             shortcuts_lines.append(f"• Ctrl+{key.upper()}: {description}")
+
+        shortcuts_lines.append("")
+        shortcuts_lines.append("Quality Rating (numpad or number keys):")
+        shortcuts_lines.append("• 1-5: Set quality rating (1-5 stars)")
 
         shortcuts_text = "\n".join(shortcuts_lines)
 
@@ -200,6 +246,64 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         self.camera_info_label.set_margin_end(12)
         camera_info_frame.set_child(self.camera_info_label)
 
+        cassette_frame = Gtk.Frame(label="Cassette Context")
+        cassette_frame.set_margin_bottom(12)
+        left_panel.append(cassette_frame)
+
+        cassette_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        cassette_box.set_margin_top(12)
+        cassette_box.set_margin_bottom(12)
+        cassette_box.set_margin_start(12)
+        cassette_box.set_margin_end(12)
+        cassette_frame.set_child(cassette_box)
+
+        # Cassette name
+        cassette_name_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        cassette_box.append(cassette_name_box)
+
+        cassette_name_label = Gtk.Label(label="Name:")
+        cassette_name_box.append(cassette_name_label)
+
+        self.cassette_name_entry = Gtk.Entry()
+        self.cassette_name_entry.set_placeholder_text("e.g., Russia, 1994")
+        self.cassette_name_entry.connect("changed", self.on_cassette_name_changed)
+        cassette_name_box.append(self.cassette_name_entry)
+
+        # Cassette date
+        cassette_date_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        cassette_box.append(cassette_date_box)
+
+        cassette_date_label = Gtk.Label(label="Date:")
+        cassette_date_box.append(cassette_date_label)
+
+        self.cassette_date_entry = Gtk.Entry()
+        self.cassette_date_entry.set_placeholder_text("Year")
+        self.cassette_date_entry.set_max_length(4)
+        self.cassette_date_entry.connect("changed", self.on_cassette_date_changed)
+        cassette_date_box.append(self.cassette_date_entry)
+
+        # Slide label
+        slide_label_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        cassette_box.append(slide_label_box)
+
+        slide_label_label = Gtk.Label(label="Slide:")
+        slide_label_box.append(slide_label_label)
+
+        self.slide_label_entry = Gtk.Entry()
+        self.slide_label_entry.set_placeholder_text("Slide label")
+        self.slide_label_entry.connect("changed", self.on_slide_label_changed)
+        slide_label_box.append(self.slide_label_entry)
+
+        # Quality rating display
+        quality_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        cassette_box.append(quality_box)
+
+        quality_display_label = Gtk.Label(label="Quality:")
+        quality_box.append(quality_display_label)
+
+        self.quality_label = Gtk.Label(label="★★★☆☆")
+        quality_box.append(self.quality_label)
+
         controls_frame = Gtk.Frame(label="Controls")
         left_panel.append(controls_frame)
 
@@ -279,6 +383,31 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
             self.iso_spin.set_sensitive(False)
             self.shutter_spin.set_sensitive(False)
             self.stop_live_view()
+
+    def on_cassette_context_changed(self, shared_state):
+        """Update UI when cassette context changes."""
+        if self.cassette_name_entry:
+            self.cassette_name_entry.set_text(self.shared_state.cassette_name)
+        if self.cassette_date_entry:
+            self.cassette_date_entry.set_text(self.shared_state.cassette_date)
+        if self.slide_label_entry:
+            self.slide_label_entry.set_text(self.shared_state.slide_label)
+        if self.quality_label:
+            # Display quality as stars
+            stars = "★" * self.shared_state.quality_rating + "☆" * (5 - self.shared_state.quality_rating)
+            self.quality_label.set_text(stars)
+
+    def on_cassette_name_changed(self, entry):
+        """Handle cassette name entry changes."""
+        self.shared_state.set_cassette_name(entry.get_text())
+
+    def on_cassette_date_changed(self, entry):
+        """Handle cassette date entry changes."""
+        self.shared_state.set_cassette_date(entry.get_text())
+
+    def on_slide_label_changed(self, entry):
+        """Handle slide label entry changes."""
+        self.shared_state.set_slide_label(entry.get_text())
 
     def start_live_view(self):
         if self.live_view_thread and self.live_view_thread.is_alive():

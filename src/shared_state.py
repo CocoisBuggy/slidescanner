@@ -10,11 +10,22 @@ class SharedState(GObject.Object):
     camera: EdsCameraRef | None = None
     camera_name: str | None = None
 
+    # Cassette context
+    cassette_name: str = ""
+    cassette_date: str = ""  # Year
+    slide_label: str = ""
+    quality_rating: int = 3  # Default 3-star rating
+
     __gsignals__ = {
         "camera-name": (
             GObject.SignalFlags.RUN_FIRST,
             None,
             (str,),  # camera_name
+        ),
+        "cassette-context-changed": (
+            GObject.SignalFlags.RUN_FIRST,
+            None,
+            (),  # No parameters - just notification
         ),
     }
 
@@ -46,3 +57,40 @@ class SharedState(GObject.Object):
             print(f"Active camera name: {self.camera_name}")
 
         self.emit("camera-name", self.camera_name)
+
+    def set_cassette_name(self, name: str):
+        """Set the current cassette name."""
+        self.cassette_name = name
+        self.emit("cassette-context-changed")
+
+    def set_cassette_date(self, date: str):
+        """Set the current cassette date (year)."""
+        self.cassette_date = date
+        self.emit("cassette-context-changed")
+
+    def set_slide_label(self, label: str):
+        """Set the current slide label."""
+        self.slide_label = label
+        self.emit("cassette-context-changed")
+
+    def set_quality_rating(self, rating: int):
+        """Set the quality rating (1-5)."""
+        if 1 <= rating <= 5:
+            self.quality_rating = rating
+            self.emit("cassette-context-changed")
+
+    def next_cassette(self):
+        """Move to the next cassette (increment cassette number)."""
+        # For now, just clear the current context and increment a cassette counter
+        # In a real implementation, you might want to save the current cassette first
+        if not hasattr(self, 'cassette_counter'):
+            self.cassette_counter = 1
+        else:
+            self.cassette_counter += 1
+
+        # Reset context for new cassette
+        self.cassette_name = f"Cassette {self.cassette_counter}"
+        self.cassette_date = ""
+        self.slide_label = ""
+        self.quality_rating = 3
+        self.emit("cassette-context-changed")
