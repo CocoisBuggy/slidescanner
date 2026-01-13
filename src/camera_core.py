@@ -21,9 +21,18 @@ EdsError = ctypes.c_uint32
 EdsBaseRef = ctypes.c_void_p
 EdsCameraListRef = EdsBaseRef
 EdsCameraRef = EdsBaseRef
+EdsEvfImageRef = EdsBaseRef
+EdsStreamRef = EdsBaseRef
+EdsDirectoryItemRef = EdsBaseRef
+EdsInt32 = ctypes.c_int32
 EdsUInt32 = ctypes.c_uint32
+EdsInt64 = ctypes.c_int64
+EdsUInt64 = ctypes.c_uint64
 EdsPropertyID = EdsUInt32
 EdsPropertyEvent = EdsUInt32
+
+# Property events
+kEdsPropertyEvent_PropertyChanged = EdsPropertyEvent(0x00000101)
 
 
 # Define EdsDeviceInfo struct
@@ -34,6 +43,13 @@ class EdsDeviceInfo(ctypes.Structure):
         ("deviceSubType", EdsUInt32),
         ("reserved", EdsUInt32),
     ]
+
+
+# Exception class
+class CameraException(Exception):
+    def __init__(self, error_code):
+        self.error_code = error_code
+        super().__init__(f"EDSDK Error code {error_code} - {ERROR_CODE_NAMES.get(error_code, 'Unknown')}")
 
 
 # Callback types
@@ -80,6 +96,26 @@ edsdk.EdsGetPropertyData.argtypes = [
 ]
 edsdk.EdsSetCameraAddedHandler.restype = EdsError
 edsdk.EdsSetCameraAddedHandler.argtypes = [EdsCameraAddedHandler, ctypes.c_void_p]
+edsdk.EdsSetPropertyData.restype = EdsError
+edsdk.EdsSetPropertyData.argtypes = [
+    EdsCameraRef,
+    EdsPropertyID,
+    EdsInt32,
+    EdsUInt32,
+    ctypes.c_void_p,
+]
+edsdk.EdsCreateEvfImageRef.restype = EdsError
+edsdk.EdsCreateEvfImageRef.argtypes = [ctypes.POINTER(EdsEvfImageRef)]
+edsdk.EdsDownloadEvfImage.restype = EdsError
+edsdk.EdsDownloadEvfImage.argtypes = [EdsCameraRef, EdsEvfImageRef]
+edsdk.EdsCreateMemoryStream.restype = EdsError
+edsdk.EdsCreateMemoryStream.argtypes = [EdsUInt64, ctypes.POINTER(EdsStreamRef)]
+edsdk.EdsDownload.restype = EdsError
+edsdk.EdsDownload.argtypes = [EdsBaseRef, EdsUInt64, EdsStreamRef]
+edsdk.EdsGetPointer.restype = EdsError
+edsdk.EdsGetPointer.argtypes = [EdsStreamRef, ctypes.POINTER(ctypes.c_void_p)]
+edsdk.EdsGetLength.restype = EdsError
+edsdk.EdsGetLength.argtypes = [EdsStreamRef, ctypes.POINTER(EdsUInt64)]
 
 # Error codes
 EDS_ERR_OK = 0x00000000

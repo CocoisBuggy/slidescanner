@@ -8,6 +8,7 @@ from .camera_core import (
     edsdk,
     EdsCameraListRef,
     EdsUInt32,
+    EdsUInt64,
     EdsCameraRef,
     EdsDeviceInfo,
     EdsPropertyEventHandler,
@@ -56,11 +57,6 @@ class CameraManager:
         self.camera_list = None
         self.camera = None
         self.initialized = Event()
-
-        Thread(target=self._property_event)
-
-    def _property_event(self):
-        pass
 
     def _edsdk_available(self):
         return edsdk is not None
@@ -173,8 +169,6 @@ class CameraManager:
 
     @needs_sdk
     def set_property_value(self, property_id: EdsPropertyIDEnum, value):
-        waiting[property_id] = Event()
-
         err = edsdk.EdsSetPropertyData(
             self.camera,
             property_id.value,
@@ -182,60 +176,54 @@ class CameraManager:
             ctypes.sizeof(EdsUInt32),
             ctypes.byref(EdsUInt32(value)),
         )
-
         if err != EDS_ERR_OK:
             raise CameraException(err)
-
-        res = waiting[property_id].wait(2)
-        del waiting[property_id]
-        if not res:
-            raise CameraException(f"Timeout for setting property {property_id}")
 
         return True
 
     @needs_sdk
     def start_live_view(self):
-        # Set output device to PC
-        self.set_property_value(EdsPropertyIDEnum.Evf_OutputDevice, 1)
+        import time
+        # Set output device to PC first
+        err = self.set_property_value(EdsPropertyIDEnum.Evf_OutputDevice, 2)
+        if err is not True:
+            print(f"Failed to set Evf_OutputDevice: {err}")
+        time.sleep(0.5)
         # Set mode to on
-        self.set_property_value(EdsPropertyIDEnum.Evf_Mode, 1)
-        time.sleep(1)  # Wait for live view to start
+        err = self.set_property_value(EdsPropertyIDEnum.Evf_Mode, 1)
+        if err is not True:
+            print(f"Failed to set Evf_Mode: {err}")
+        time.sleep(0.5)
 
     @needs_sdk
     def download_evf_image(self):
-        evf_image = EdsEvfImageRef()
-        err = edsdk.EdsCreateEvfImageRef(ctypes.byref(evf_image))
+        # Create memory stream
+        stream = EdsStreamRef()
+        err = edsdk.EdsCreateMemoryStream(EdsUInt64(0), ctypes.byref(stream))
         if err != EDS_ERR_OK:
+            raise CameraException(err)
+
+        evf_image = EdsEvfImageRef()
+        err = edsdk.EdsCreateEvfImageRef(stream, ctypes.byref(evf_image))
+        if err != EDS_ERR_OK:
+            edsdk.EdsRelease(stream)
             raise CameraException(err)
 
         err = edsdk.EdsDownloadEvfImage(self.camera, evf_image)
         if err != EDS_ERR_OK:
             edsdk.EdsRelease(evf_image)
-            raise CameraException(err)
-
-        # Create memory stream
-        stream = EdsStreamRef()
-        err = edsdk.EdsCreateMemoryStream(0, ctypes.byref(stream))
-        if err != EDS_ERR_OK:
-            edsdk.EdsRelease(evf_image)
-            raise CameraException(err)
-
-        # Download the image data to stream
-        err = edsdk.EdsDownload(evf_image, stream)
-        if err != EDS_ERR_OK:
             edsdk.EdsRelease(stream)
-            edsdk.EdsRelease(evf_image)
             raise CameraException(err)
 
         # Get data
         pointer = ctypes.c_void_p()
-        length = EdsUInt32()
+        length = EdsUInt64()
         edsdk.EdsGetPointer(stream, ctypes.byref(pointer))
         edsdk.EdsGetLength(stream, ctypes.byref(length))
 
         data = ctypes.string_at(pointer, length.value)
 
-        edsdk.EdsRelease(stream)
         edsdk.EdsRelease(evf_image)
+        edsdk.EdsRelease(stream)
 
         return data
