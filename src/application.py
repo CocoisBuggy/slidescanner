@@ -3,6 +3,8 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Gio  # noqa: E402
 
+from .camera import CameraManager  # noqa: E402
+
 
 class SlideScannerApplication(Gtk.Application):
     def __init__(self):
@@ -10,10 +12,31 @@ class SlideScannerApplication(Gtk.Application):
             application_id="com.example.slidescanner",
             flags=Gio.ApplicationFlags.FLAGS_NONE,
         )
+        self.camera_manager = CameraManager()
 
     def do_activate(self):
+        # Initialize camera manager
+        camera_status = "No camera connected"
+        if not self.camera_manager.initialize():
+            print("Failed to initialize EDSDK")
+            camera_status = "EDSDK initialization failed"
+        else:
+            success, message = self.camera_manager.connect_first_camera()
+            if success:
+                print(f"Connected to camera: {message}")
+                camera_status = f"Connected: {message}"
+            else:
+                print(f"Failed to connect to camera: {message}")
+                camera_status = f"Connection failed: {message}"
+
         win = SlideScannerWindow(application=self)
+        if win.camera_info_label:
+            win.camera_info_label.set_text(camera_status)
         win.present()
+
+    def do_shutdown(self):
+        self.camera_manager.terminate()
+        super().do_shutdown()
 
 
 class SlideScannerWindow(Gtk.ApplicationWindow):
@@ -21,6 +44,8 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         super().__init__(**kwargs)
         self.set_title("Slide Scanner")
         self.set_default_size(800, 600)
+
+        self.camera_info_label = None
 
         self.create_header_bar()
         self.create_main_content()
@@ -119,12 +144,12 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         camera_info_frame.set_margin_bottom(12)
         left_panel.append(camera_info_frame)
 
-        info_label = Gtk.Label(label="No camera connected")
-        info_label.set_margin_top(6)
-        info_label.set_margin_bottom(6)
-        info_label.set_margin_start(6)
-        info_label.set_margin_end(6)
-        camera_info_frame.set_child(info_label)
+        self.camera_info_label = Gtk.Label(label="No camera connected")
+        self.camera_info_label.set_margin_top(6)
+        self.camera_info_label.set_margin_bottom(6)
+        self.camera_info_label.set_margin_start(6)
+        self.camera_info_label.set_margin_end(6)
+        camera_info_frame.set_child(self.camera_info_label)
 
         controls_frame = Gtk.Frame(label="Controls")
         left_panel.append(controls_frame)

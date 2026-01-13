@@ -68,6 +68,7 @@
           gdb
           valgrind
           clang-tools
+          libusb1
         ];
       in
       {
@@ -77,7 +78,7 @@
           shellHook = ''
             export PYTHONPATH="${pkgs.python3}/${pkgs.python3.sitePackages}:$PYTHONPATH"
             export GI_TYPELIB_PATH="${pkgs.gtk4}/lib/girepository-1.0:${pkgs.gdk-pixbuf}/lib/girepository-1.0:${pkgs.pango}/lib/girepository-1.0:${pkgs.cairo}/lib/girepository-1.0:$GI_TYPELIB_PATH"
-            export LD_LIBRARY_PATH="${pkgs.gtk4}/lib:${pkgs.gdk-pixbuf}/lib:${pkgs.pango}/lib:${pkgs.cairo}/lib:$LD_LIBRARY_PATH"
+             export LD_LIBRARY_PATH="${pkgs.gtk4}/lib:${pkgs.gdk-pixbuf}/lib:${pkgs.pango}/lib:${pkgs.cairo}/lib:${pkgs.libusb1}/lib:$LD_LIBRARY_PATH"
 
             # EDSDK library paths
             export EDSDK_ROOT="$(pwd)/EDSDK"
