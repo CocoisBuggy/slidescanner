@@ -72,6 +72,32 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         print("Quit application shortcut triggered")
         self.get_application().quit()
 
+    def show_shortcuts_dialog(self):
+        """Display a dialog showing all available keyboard shortcuts."""
+        # Dynamically generate shortcuts text from the shortcuts dictionary
+        shortcut_descriptions = {
+            'c': 'Capture Image',
+            's': 'Open Settings',
+            'q': 'Quit Application'
+        }
+
+        shortcuts_lines = ["Available Keyboard Shortcuts:"]
+        for key, description in shortcut_descriptions.items():
+            shortcuts_lines.append(f"• Ctrl+{key.upper()}: {description}")
+
+        shortcuts_text = "\n".join(shortcuts_lines)
+
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            modal=True,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.OK,
+            text="Keyboard Shortcuts",
+            secondary_text=shortcuts_text
+        )
+        dialog.connect("response", lambda dialog, response: dialog.destroy())
+        dialog.present()
+
     def create_header_bar(self):
         header_bar = Gtk.HeaderBar()
         self.set_titlebar(header_bar)
@@ -135,6 +161,10 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
 
         settings_btn = Gtk.Button(label="Settings")
         toolbar.append(settings_btn)
+
+        shortcuts_btn = Gtk.Button(label="Shortcuts")
+        shortcuts_btn.connect("clicked", lambda btn: self.show_shortcuts_dialog())
+        toolbar.append(shortcuts_btn)
 
         return toolbar
 
