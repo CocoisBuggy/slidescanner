@@ -1,9 +1,6 @@
 import signal
 import sys
 
-import gi
-
-gi.require_version("Gtk", "4.0")
 
 from src.application import SlideScannerApplication
 

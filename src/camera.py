@@ -1,93 +1,29 @@
 import ctypes
-import os
-
-# Load EDSDK library
-lib_path = os.path.join(
-    os.path.dirname(__file__),
-    "..",
-    "EDSDK",
-    "Library",
-    "docs",
-    "Linux",
-    "EDSDK",
-    "Library",
-    "x86_64",
-    "libEDSDK.so",
-)
-edsdk = ctypes.CDLL(lib_path)
-
-# Define types
-EdsError = ctypes.c_uint32
-EdsBaseRef = ctypes.c_void_p
-EdsCameraListRef = EdsBaseRef
-EdsCameraRef = EdsBaseRef
-EdsUInt32 = ctypes.c_uint32
-EdsPropertyID = EdsUInt32
-EdsPropertyEvent = EdsUInt32
-
-
-# Define EdsDeviceInfo struct
-class EdsDeviceInfo(ctypes.Structure):
-    _fields_ = [
-        ("szPortName", ctypes.c_char * 256),
-        ("szDeviceDescription", ctypes.c_char * 256),
-        ("deviceSubType", EdsUInt32),
-        ("reserved", EdsUInt32),
-    ]
-
-
-# Callback type
-EdsPropertyEventHandler = ctypes.CFUNCTYPE(
-    EdsError, EdsPropertyEvent, EdsPropertyID, EdsUInt32, ctypes.c_void_p
-)
-
-# Function prototypes
-edsdk.EdsInitializeSDK.restype = EdsError
-edsdk.EdsTerminateSDK.restype = EdsError
-edsdk.EdsGetCameraList.restype = EdsError
-edsdk.EdsGetCameraList.argtypes = [ctypes.POINTER(EdsCameraListRef)]
-edsdk.EdsGetChildCount.restype = EdsError
-edsdk.EdsGetChildCount.argtypes = [EdsBaseRef, ctypes.POINTER(EdsUInt32)]
-edsdk.EdsGetChildAtIndex.restype = EdsError
-edsdk.EdsGetChildAtIndex.argtypes = [
-    EdsBaseRef,
+from threading import Event
+from .camera_core import (
+    EDS_ERR_OK,
+    CameraException,
+    kEdsPropertyEvent_PropertyChanged,
+    kEdsPropID_ISOSpeed,
+    kEdsPropID_Av,
+    kEdsPropID_Tv,
+    edsdk,
+    EdsCameraListRef,
     EdsUInt32,
-    ctypes.POINTER(EdsCameraRef),
-]
-edsdk.EdsGetDeviceInfo.restype = EdsError
-edsdk.EdsGetDeviceInfo.argtypes = [EdsCameraRef, ctypes.POINTER(EdsDeviceInfo)]
-edsdk.EdsOpenSession.restype = EdsError
-edsdk.EdsOpenSession.argtypes = [EdsCameraRef]
-edsdk.EdsCloseSession.restype = EdsError
-edsdk.EdsCloseSession.argtypes = [EdsCameraRef]
-edsdk.EdsRelease.restype = EdsError
-edsdk.EdsRelease.argtypes = [EdsBaseRef]
-edsdk.EdsSetPropertyEventHandler.restype = EdsError
-edsdk.EdsSetPropertyEventHandler.argtypes = [
     EdsCameraRef,
-    EdsPropertyEvent,
+    EdsDeviceInfo,
     EdsPropertyEventHandler,
-    ctypes.c_void_p,
-]
-edsdk.EdsGetPropertyData.restype = EdsError
-edsdk.EdsGetPropertyData.argtypes = [
-    EdsCameraRef,
-    EdsPropertyID,
-    EdsUInt32,
-    EdsUInt32,
-    ctypes.c_void_p,
-]
+)
 
-# Error codes
-EDS_ERR_OK = 0x00000000
 
-# Property event constants
-kEdsPropertyEvent_PropertyChanged = 0x00000101
+def needs_sdk(inner):
+    def wrapper(self, *args, **kwargs):
+        if not self.initialized.is_set() or not self._edsdk_available():
+            raise CameraException("SDK is not initialized")
 
-# Property IDs
-kEdsPropID_ISOSpeed = 0x00000402
-kEdsPropID_Av = 0x00000405
-kEdsPropID_Tv = 0x00000406
+        return inner(self, *args, **kwargs)
+
+    return wrapper
 
 
 # Property change callback
@@ -109,10 +45,12 @@ def _property_callback(event, property_id, param, context):
 
 
 class CameraManager:
+    initialized: Event
+
     def __init__(self):
         self.camera_list = None
         self.camera = None
-        self.initialized = False
+        self.initialized = Event()
 
     def _edsdk_available(self):
         return edsdk is not None
@@ -120,9 +58,11 @@ class CameraManager:
     def initialize(self):
         if not self._edsdk_available():
             return False
+
         err = edsdk.EdsInitializeSDK()
         if err == EDS_ERR_OK:
-            self.initialized = True
+            self.initialized.set()
+
             return True
         return False
 
@@ -138,70 +78,81 @@ class CameraManager:
             self.camera_list = None
         if self.initialized:
             edsdk.EdsTerminateSDK()
-            self.initialized = False
+            self.initialized.clear()
 
+    @needs_sdk
     def get_camera_list(self):
-        if not self.initialized or not self._edsdk_available():
-            return False
         camera_list = EdsCameraListRef()
         err = edsdk.EdsGetCameraList(ctypes.byref(camera_list))
+
         if err != EDS_ERR_OK:
-            return False
+            raise CameraException(err)
+
         self.camera_list = camera_list
+
         return True
 
+    @needs_sdk
     def get_camera_count(self):
-        if not self.camera_list or not self._edsdk_available():
-            return 0
+        if self.camera_list is None:
+            if not self.get_camera_list():
+                raise CameraException("Camera list uninitialized")
+
         count = EdsUInt32()
         err = edsdk.EdsGetChildCount(self.camera_list, ctypes.byref(count))
+
         if err != EDS_ERR_OK:
-            return 0
+            raise CameraException(err)
+
         return count.value
 
+    @needs_sdk
     def get_camera(self, index=0):
-        if not self.camera_list or not self._edsdk_available():
-            return None
-        camera = EdsCameraRef()
-        err = edsdk.EdsGetChildAtIndex(self.camera_list, index, ctypes.byref(camera))
-        if err != EDS_ERR_OK:
-            return None
-        return camera
+        camera_ref = EdsCameraRef()
+        err = edsdk.EdsGetChildAtIndex(
+            self.camera_list, index, ctypes.byref(camera_ref)
+        )
 
-    def get_device_info(self, camera):
-        if not self._edsdk_available():
-            return None
+        if err != EDS_ERR_OK:
+            raise CameraException(err)
+
+        return camera_ref
+
+    @needs_sdk
+    def get_device_info(self, camera) -> EdsDeviceInfo | None:
         device_info = EdsDeviceInfo()
         err = edsdk.EdsGetDeviceInfo(camera, ctypes.byref(device_info))
-        if err != EDS_ERR_OK:
-            return None
-        return device_info.szDeviceDescription.decode("utf-8")
 
+        if err != EDS_ERR_OK:
+            raise CameraException(err)
+
+        return device_info
+
+    @needs_sdk
     def open_session(self, camera):
-        if not self._edsdk_available():
-            return False
         err = edsdk.EdsOpenSession(camera)
         if err == EDS_ERR_OK:
             self.camera = camera
             return True
-        return False
 
+        raise CameraException(err)
+
+    @needs_sdk
     def set_property_event_handler(self):
-        if not self.camera or not self._edsdk_available():
-            return False
         global _property_handler
         _property_handler = EdsPropertyEventHandler(_property_callback)
+
         err = edsdk.EdsSetPropertyEventHandler(
             self.camera,
             kEdsPropertyEvent_PropertyChanged,
             _property_handler,
             ctypes.py_object(self),
         )
+
         return err == EDS_ERR_OK
 
+    @needs_sdk
     def get_property_value(self, property_id):
-        if not self.camera or not self._edsdk_available():
-            return None
         value = EdsUInt32()
         err = edsdk.EdsGetPropertyData(
             self.camera, property_id, 0, ctypes.sizeof(EdsUInt32), ctypes.byref(value)
@@ -209,27 +160,3 @@ class CameraManager:
         if err == EDS_ERR_OK:
             return value.value
         return None
-
-    def connect_first_camera(self):
-        if not self.get_camera_list():
-            return False, "Failed to get camera list"
-
-        count = self.get_camera_count()
-        if count == 0:
-            return False, "No cameras found"
-
-        camera = self.get_camera(0)
-        if not camera:
-            return False, "Failed to get camera"
-
-        name = self.get_device_info(camera)
-        if not name:
-            return False, "Failed to get device info"
-
-        if not self.open_session(camera):
-            return False, "Failed to open session"
-
-        if not self.set_property_event_handler():
-            return False, "Failed to set property event handler"
-
-        return True, name
