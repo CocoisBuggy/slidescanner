@@ -1,7 +1,8 @@
 import gi
 
+from .picture import CassetteItem
+
 gi.require_version("Gtk", "4.0")
-gi.require_version("Gdk", "4.0")
 
 from gi.repository import Gdk, Gtk
 
@@ -63,26 +64,31 @@ class ShortcutsHandler:
 
         # Take the picture
         try:
-            self.window.shared_state.camera_manager.take_picture()
-            print("Image captured with cassette context:")
-            print(f"  Name: {self.window.shared_state.cassette_name}")
-            print(f"  Date: {self.window.shared_state.cassette_date}")
-            print(f"  Slide: {self.window.shared_state.slide_label}")
-            print(f"  Quality: {self.window.shared_state.quality_rating} stars")
+            from datetime import datetime
 
-            # TODO: Download the captured image and add metadata
-            # TODO: Save image with cassette context in EXIF metadata
+            # Parse cassette_date string to datetime, or use None if empty
+            cassette_date = None
+            if self.window.shared_state.cassette_date.strip():
+                try:
+                    cassette_date = datetime.strptime(
+                        self.window.shared_state.cassette_date.strip(), "%Y"
+                    )
+                except ValueError:
+                    # If parsing fails, try more formats or use None
+                    cassette_date = None
 
-            # Reset slide label and quality rating for next slide
-            self.window.shared_state.set_slide_label("")
-            self.window.shared_state.set_quality_rating(0)
+            self.window.shared_state.camera_manager.take_picture(
+                CassetteItem(
+                    name=self.window.shared_state.cassette_name,
+                    label=self.window.shared_state.slide_label,
+                    stars=self.window.shared_state.quality_rating,
+                    date=cassette_date,
+                )
+            )
 
         except Exception as e:
             print(f"Failed to capture image: {e}")
             # TODO: Show error dialog to user
-
-        # These should be written to EXIF metadata
-        # For now, just print a message
 
     def open_settings(self):
         """Handle Ctrl+S: Open settings."""
@@ -100,9 +106,6 @@ class ShortcutsHandler:
         """Handle Ctrl+N: Move to next cassette."""
         print("Next cassette shortcut triggered")
         self.window.shared_state.next_cassette()
-        # Focus the cassette name entry for user input
-        if hasattr(self.window, 'cassette_name_entry') and self.window.cassette_name_entry:
-            self.window.cassette_name_entry.grab_focus()
 
     def set_quality_rating(self, rating):
         """Set quality rating (1-5 stars)."""

@@ -55,7 +55,8 @@ class SharedState(GObject.Object):
             import time
 
             time.sleep(1.0)
-            # self.camera_manager.set_property_event_handler()
+            self.camera_manager.set_property_event_handler()
+            self.camera_manager.set_object_event_handler()
             time.sleep(0.5)
             self.camera_manager.start_live_view()
             time.sleep(1.5)

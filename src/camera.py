@@ -1,31 +1,34 @@
 import ctypes
+import os
 import time
-from threading import Event
+from threading import Event, Lock
+
+from .picture import CassetteItem
+from .settings import Settings
+
 from .camera_core import (
     EDS_ERR_OK,
     CameraException,
-    kEdsPropertyEvent_PropertyChanged,
-    kEdsCameraCommand_TakePicture,
+    EdsCameraListRef,
+    EdsCameraRef,
+    EdsDeviceInfo,
+    EdsDirectoryItemInfo,
+    EdsEvfImageRef,
+    EdsObjectEventHandler,
+    EdsPropertyEventHandler,
+    EdsPropertyIDEnum,
+    EdsStreamRef,
+    EdsUInt32,
+    EdsUInt64,
+    _property_callback,
+    edsdk,
     kEdsCameraCommand_PressShutterButton,
     kEdsCameraCommand_ShutterButton_Completely_NonAF,
     kEdsCameraCommand_ShutterButton_OFF,
     kEdsObjectEvent_All,
     kEdsObjectEvent_DirItemRequestTransfer,
-    edsdk,
-    EdsCameraListRef,
-    EdsUInt32,
-    EdsUInt64,
-    EdsCameraRef,
-    EdsDeviceInfo,
-    EdsDirectoryItemInfo,
-    EdsPropertyEventHandler,
-    EdsObjectEventHandler,
-    EdsEvfImageRef,
-    EdsStreamRef,
-    EdsPropertyIDEnum,
-    _property_callback,
+    kEdsPropertyEvent_PropertyChanged,
 )
-
 from .camera_core.properties import waiting
 
 
@@ -42,11 +45,24 @@ def needs_sdk(inner):
 # Global references for callbacks
 _global_camera_manager = None
 _global_shared_state = None
+_queued_photo_request: CassetteItem | None = None
+
+
+# Map format to file extension
+format_to_extension = {
+    0x00000000: ".jpg",  # kEdsImageType_Unknown
+    0x00000001: ".jpg",  # kEdsImageType_Jpeg
+    0x00000002: ".crw",  # kEdsImageType_CRW
+    0x00000004: ".raw",  # kEdsImageType_RAW
+    0x00000006: ".cr2",  # kEdsImageType_CR2
+    0x00000008: ".heif",  # kEdsImageType_HEIF
+    0xB108: ".cr3",  # kEdsObjectFormat_CR3
+}
 
 
 # Object event callback (for image capture events)
 def _object_callback(event, object_ref, context):
-    global _global_camera_manager
+    global _global_camera_manager, _queued_photo_request
     print(f"Got object event from camera: {event}, {object_ref}")
 
     if event == kEdsObjectEvent_DirItemRequestTransfer:
@@ -55,13 +71,19 @@ def _object_callback(event, object_ref, context):
         if _global_camera_manager is not None:
             try:
                 # Download the image
-                filename = _global_camera_manager.download_image(object_ref)
+                if _queued_photo_request is None:
+                    raise Exception("No queued request")
+
+                filename = _global_camera_manager.download_image(
+                    object_ref,
+                    _queued_photo_request,
+                )
+
                 print(f"Successfully downloaded image: {filename}")
-
-                # TODO: Add cassette context metadata to the downloaded image
-
             except Exception as e:
                 print(f"Failed to download image: {e}")
+
+            _queued_photo_request = None
         else:
             print("No camera manager available for image download")
 
@@ -301,15 +323,23 @@ class CameraManager:
         return data
 
     @needs_sdk
-    def take_picture(self):
+    def take_picture(self, req: CassetteItem):
         """Take a picture using the camera."""
+        global _queued_photo_request
         print("Taking picture...")
+
+        if _queued_photo_request is not None:
+            raise Exception("We are still waiting for the last photo to resolve")
+
+        _queued_photo_request = req
+
         # Use PressShutter instead of TakePicture command for better compatibility
         err = edsdk.EdsSendCommand(
             self.camera,
             kEdsCameraCommand_PressShutterButton,
             kEdsCameraCommand_ShutterButton_Completely_NonAF,
         )
+
         if err != EDS_ERR_OK:
             # Release the shutter button
             edsdk.EdsSendCommand(
@@ -318,6 +348,7 @@ class CameraManager:
                 kEdsCameraCommand_ShutterButton_OFF,
             )
             raise CameraException(err)
+
         # Release the shutter button
         err = edsdk.EdsSendCommand(
             self.camera,
@@ -326,13 +357,23 @@ class CameraManager:
         )
         if err != EDS_ERR_OK:
             raise CameraException(err)
+
         print("Picture taken successfully")
         return True
 
     @needs_sdk
-    def download_image(self, directory_item, shared_state=None):
+    def download_image(
+        self,
+        directory_item,
+        photo_req: CassetteItem,
+        shared_state=None,
+    ):
         """Download an image from the camera."""
+        settings = Settings()
         print("Downloading image...")
+
+        if photo_req is None:
+            raise Exception("No request context")
 
         # Get directory item information
         dir_item_info = EdsDirectoryItemInfo()
@@ -341,31 +382,25 @@ class CameraManager:
             raise CameraException(err)
 
         print(
-            f"Downloading file: {dir_item_info.szFileName.decode('utf-8')}, size: {dir_item_info.size}, format: {dir_item_info.format}"
+            f"Downloading file: {dir_item_info.szFileName.decode('utf-8')}, "
+            f"size: {dir_item_info.size}, format: {dir_item_info.format}"
         )
-
-        # Map format to file extension
-        format_to_extension = {
-            0x00000000: ".jpg",  # kEdsImageType_Unknown
-            0x00000001: ".jpg",  # kEdsImageType_Jpeg
-            0x00000002: ".crw",  # kEdsImageType_CRW
-            0x00000004: ".raw",  # kEdsImageType_RAW
-            0x00000006: ".cr2",  # kEdsImageType_CR2
-            0x00000008: ".heif",  # kEdsImageType_HEIF
-            0xB108: ".cr3",  # kEdsObjectFormat_CR3
-        }
 
         # Get appropriate extension, default to .jpg
         extension = format_to_extension.get(dir_item_info.format, ".jpg")
+
         print(
-            f"Detected format: 0x{dir_item_info.format:08X}, using extension: {extension}"
+            f"Detected format: 0x{dir_item_info.format:08X},"
+            f" using extension: {extension}"
         )
 
         # Create output directory if it doesn't exist
-        import os
+        outdir = os.path.join(settings.photo_location, (photo_req.name or "default"))
 
-        output_dir = "captured_images"
-        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(
+            outdir,
+            exist_ok=True,
+        )
 
         # Generate filename using cassette name + sequential number
         global _global_shared_state
@@ -378,9 +413,12 @@ class CameraManager:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"image_{timestamp}{extension}"
 
-        filepath = os.path.join(output_dir, filename)
-        print(f"Target filepath: {filepath}")
+        filepath = os.path.join(
+            outdir,
+            filename,
+        )
 
+        print(f"Target filepath: {filepath}")
         # Download to memory stream first, then copy to file
         print("Creating memory stream for download...")
         mem_stream = EdsStreamRef()

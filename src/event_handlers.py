@@ -30,7 +30,9 @@ class EventHandlers:
             # Only update if the text is different to avoid recursion
             current_text = self.window.slide_label_entry.get_text()
             if current_text != self.window.shared_state.slide_label:
-                self.window.slide_label_entry.set_text(self.window.shared_state.slide_label)
+                self.window.slide_label_entry.set_text(
+                    self.window.shared_state.slide_label
+                )
 
         if self.window.quality_label:
             # Display quality as stars
