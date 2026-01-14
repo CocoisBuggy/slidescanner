@@ -5,23 +5,24 @@ class EventHandlers:
     def on_camera_name_changed(self, shared_state, camera_name):
         if camera_name:
             self.window.camera_info_label.set_text(camera_name)
-            self.window.iso_spin.set_sensitive(True)
-            self.window.shutter_spin.set_sensitive(True)
             self.window.live_view.start_live_view()
         else:
             self.window.camera_info_label.set_text("No camera connected")
-            self.window.iso_spin.set_sensitive(False)
-            self.window.shutter_spin.set_sensitive(False)
             self.window.live_view.stop_live_view()
 
     def on_cassette_context_changed(self, shared_state):
         """Update UI when cassette context changes."""
         if self.window.cassette_name_entry:
-            self.window.cassette_name_entry.set_text(self.window.shared_state.cassette_name)
+            self.window.cassette_name_entry.set_text(
+                self.window.shared_state.cassette_name
+            )
         if self.window.cassette_date_entry:
-            self.window.cassette_date_entry.set_text(self.window.shared_state.cassette_date)
+            self.window.cassette_date_entry.set_text(
+                self.window.shared_state.cassette_date
+            )
         if self.window.slide_label_entry:
             self.window.slide_label_entry.set_text(self.window.shared_state.slide_label)
+
         if self.window.quality_label:
             # Display quality as stars
             stars = "★" * self.window.shared_state.quality_rating + "☆" * (

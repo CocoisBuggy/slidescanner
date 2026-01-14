@@ -41,6 +41,7 @@ EdsInt64 = ctypes.c_int64
 EdsUInt64 = ctypes.c_uint64
 EdsPropertyID = EdsUInt32
 EdsPropertyEvent = EdsUInt32
+EdsDataType = EdsUInt32
 
 # Property events
 kEdsPropertyEvent_PropertyChanged = EdsPropertyEvent(0x00000101)
@@ -53,6 +54,68 @@ class EdsDeviceInfo(ctypes.Structure):
         ("szDeviceDescription", ctypes.c_char * 256),
         ("deviceSubType", EdsUInt32),
         ("reserved", EdsUInt32),
+    ]
+
+
+# Define EdsRational struct
+class EdsRational(ctypes.Structure):
+    _fields_ = [
+        ("numerator", EdsInt32),
+        ("denominator", EdsUInt32),
+    ]
+
+
+# Define EdsPoint struct
+class EdsPoint(ctypes.Structure):
+    _fields_ = [
+        ("x", EdsInt32),
+        ("y", EdsInt32),
+    ]
+
+
+# Define EdsRect struct
+class EdsRect(ctypes.Structure):
+    _fields_ = [
+        ("x", EdsInt32),
+        ("y", EdsInt32),
+        ("width", EdsInt32),
+        ("height", EdsInt32),
+    ]
+
+
+# Define EdsTime struct
+class EdsTime(ctypes.Structure):
+    _fields_ = [
+        ("year", EdsUInt32),
+        ("month", EdsUInt32),
+        ("day", EdsUInt32),
+        ("hour", EdsUInt32),
+        ("minute", EdsUInt32),
+        ("second", EdsUInt32),
+        ("milliseconds", EdsUInt32),
+    ]
+
+
+# Define EdsFocusInfo struct (simplified, may need expansion)
+class EdsFocusInfo(ctypes.Structure):
+    _fields_ = [
+        ("imageRect", EdsRect),
+        ("pointNumber", EdsUInt32),
+        # Additional fields would be needed for complete implementation
+    ]
+
+
+# Define EdsPictureStyleDesc struct
+class EdsPictureStyleDesc(ctypes.Structure):
+    _fields_ = [
+        ("contrast", EdsInt32),
+        ("sharpness", EdsUInt32),
+        ("saturation", EdsInt32),
+        ("colorTone", EdsInt32),
+        ("filterEffect", EdsUInt32),
+        ("toningEffect", EdsUInt32),
+        ("sharpFineness", EdsUInt32),
+        ("sharpThreshold", EdsUInt32),
     ]
 
 
@@ -95,6 +158,14 @@ if edsdk is not None:
         EdsPropertyEventHandler,
         ctypes.py_object,
     ]
+    edsdk.EdsGetPropertySize.restype = EdsError
+    edsdk.EdsGetPropertySize.argtypes = [
+        EdsBaseRef,
+        EdsPropertyID,
+        EdsInt32,
+        ctypes.POINTER(EdsDataType),
+        ctypes.POINTER(EdsUInt32),
+    ]
     edsdk.EdsGetPropertyData.restype = EdsError
     edsdk.EdsGetPropertyData.argtypes = [
         EdsCameraRef,
@@ -131,6 +202,36 @@ kEdsCameraCommand_TakePicture = 0x00000000
 
 # Object events
 kEdsObjectEvent_DirItemCreated = 0x00000204
+
+# Data types
+kEdsDataType_Unknown = 0
+kEdsDataType_Bool = 1
+kEdsDataType_String = 2
+kEdsDataType_Int8 = 3
+kEdsDataType_UInt8 = 6
+kEdsDataType_Int16 = 4
+kEdsDataType_UInt16 = 7
+kEdsDataType_Int32 = 8
+kEdsDataType_UInt32 = 9
+kEdsDataType_Int64 = 10
+kEdsDataType_UInt64 = 11
+kEdsDataType_Float = 12
+kEdsDataType_Double = 13
+kEdsDataType_ByteBlock = 14
+kEdsDataType_Rational = 20
+kEdsDataType_Point = 21
+kEdsDataType_Rect = 22
+kEdsDataType_Time = 23
+kEdsDataType_Bool_Array = 30
+kEdsDataType_Int8_Array = 31
+kEdsDataType_Int16_Array = 32
+kEdsDataType_Int32_Array = 33
+kEdsDataType_UInt8_Array = 34
+kEdsDataType_UInt16_Array = 35
+kEdsDataType_UInt32_Array = 36
+kEdsDataType_Rational_Array = 37
+kEdsDataType_FocusInfo = 101
+kEdsDataType_PictureStyleDesc = 102
 
 # Global references to avoid GC
 _property_handler = None

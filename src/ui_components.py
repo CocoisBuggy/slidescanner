@@ -82,7 +82,9 @@ class UIComponents:
         toolbar.append(settings_btn)
 
         shortcuts_btn = Gtk.Button(label="Shortcuts")
-        shortcuts_btn.connect("clicked", lambda btn: self.window.shortcuts_handler.show_shortcuts_dialog())
+        shortcuts_btn.connect(
+            "clicked", lambda btn: self.window.shortcuts_handler.show_shortcuts_dialog()
+        )
         toolbar.append(shortcuts_btn)
 
         return toolbar
@@ -139,7 +141,9 @@ class UIComponents:
 
         self.window.cassette_name_entry = Gtk.Entry()
         self.window.cassette_name_entry.set_placeholder_text("e.g., Russia, 1994")
-        self.window.cassette_name_entry.connect("changed", self.window.event_handlers.on_cassette_name_changed)
+        self.window.cassette_name_entry.connect(
+            "changed", self.window.event_handlers.on_cassette_name_changed
+        )
         cassette_name_box.append(self.window.cassette_name_entry)
 
         # Cassette date
@@ -152,7 +156,9 @@ class UIComponents:
         self.window.cassette_date_entry = Gtk.Entry()
         self.window.cassette_date_entry.set_placeholder_text("Year")
         self.window.cassette_date_entry.set_max_length(4)
-        self.window.cassette_date_entry.connect("changed", self.window.event_handlers.on_cassette_date_changed)
+        self.window.cassette_date_entry.connect(
+            "changed", self.window.event_handlers.on_cassette_date_changed
+        )
         cassette_date_box.append(self.window.cassette_date_entry)
 
         # Slide label
@@ -164,7 +170,9 @@ class UIComponents:
 
         self.window.slide_label_entry = Gtk.Entry()
         self.window.slide_label_entry.set_placeholder_text("Slide label")
-        self.window.slide_label_entry.connect("changed", self.window.event_handlers.on_slide_label_changed)
+        self.window.slide_label_entry.connect(
+            "changed", self.window.event_handlers.on_slide_label_changed
+        )
         slide_label_box.append(self.window.slide_label_entry)
 
         # Quality rating display

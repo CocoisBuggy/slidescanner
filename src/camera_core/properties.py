@@ -8,6 +8,21 @@ from .sdk import (
     edsdk,
     EdsUInt32,
     EdsInt32,
+    EdsRational,
+    EdsPoint,
+    EdsRect,
+    EdsTime,
+    EdsFocusInfo,
+    EdsPictureStyleDesc,
+    kEdsDataType_UInt32,
+    kEdsDataType_Int32,
+    kEdsDataType_String,
+    kEdsDataType_Rational,
+    kEdsDataType_Point,
+    kEdsDataType_Rect,
+    kEdsDataType_Time,
+    kEdsDataType_FocusInfo,
+    kEdsDataType_PictureStyleDesc,
 )
 
 
@@ -163,7 +178,7 @@ def _property_callback(event, property_id: int, param, context):
     """Extract property data from camera when properties change."""
     global waiting, results
     property = EdsPropertyIDEnum(property_id)
-    print(f"Got property change: {property} (event: {event}, param: {param})")
+    print(f"Got property change: {property} (event: {event}, param: {param})", end=" ")
 
     # Extract the camera manager from context
     if context:
@@ -174,33 +189,48 @@ def _property_callback(event, property_id: int, param, context):
                 try:
                     data = _extract_property_data(manager.camera, property_id)
                     results[property] = data
-                    print(f"  Extracted data: {data}")
-
+                    print(f"Got data: {data}")
                 except Exception as e:
-                    print(f"  Failed to extract property data: {e}")
+                    print(f"Failed to extract property data: {e}")
         except Exception as e:
-            print(f"  Failed to extract manager from context: {e}")
+            print(f"Failed to extract manager from context: {e}")
 
-    if property in waiting:
-        waiting[property].set()
-
-        for listener in listeners[property]:
-            listener(results.get(property))
+    waiting[property].set()
+    for listener in listeners[property]:
+        listener(results.get(property))
 
     return EDS_ERR_OK
 
 
 def _allocate_buffers(size, data_type):
-    if data_type.value == 3:  # kEdsDataType_UInt32
+    if data_type.value == kEdsDataType_UInt32:
         buffer = EdsUInt32()
         buffer_size = ctypes.sizeof(EdsUInt32)
-    elif data_type.value == 2:  # kEdsDataType_Int32
+    elif data_type.value == kEdsDataType_Int32:
         buffer = EdsInt32()
         buffer_size = ctypes.sizeof(EdsInt32)
-    elif data_type.value == 6:  # kEdsDataType_String
+    elif data_type.value == kEdsDataType_String:
         # For strings, use a reasonable buffer size
         buffer = ctypes.create_string_buffer(256)
         buffer_size = 256
+    elif data_type.value == kEdsDataType_Rational:
+        buffer = EdsRational()
+        buffer_size = ctypes.sizeof(EdsRational)
+    elif data_type.value == kEdsDataType_Point:
+        buffer = EdsPoint()
+        buffer_size = ctypes.sizeof(EdsPoint)
+    elif data_type.value == kEdsDataType_Rect:
+        buffer = EdsRect()
+        buffer_size = ctypes.sizeof(EdsRect)
+    elif data_type.value == kEdsDataType_Time:
+        buffer = EdsTime()
+        buffer_size = ctypes.sizeof(EdsTime)
+    elif data_type.value == kEdsDataType_FocusInfo:
+        buffer = EdsFocusInfo()
+        buffer_size = ctypes.sizeof(EdsFocusInfo)
+    elif data_type.value == kEdsDataType_PictureStyleDesc:
+        buffer = EdsPictureStyleDesc()
+        buffer_size = ctypes.sizeof(EdsPictureStyleDesc)
     else:
         # Default to UInt32 for unknown types
         buffer = EdsUInt32()
@@ -236,11 +266,46 @@ def _extract_property_data(camera, property_id):
         raise CameraException(f"Failed to get property data: {err}")
 
     # Extract the value based on data type
-    if data_type.value == 3:  # UInt32
+    if data_type.value == kEdsDataType_UInt32:
         return buffer.value
-    elif data_type.value == 2:  # Int32
+    elif data_type.value == kEdsDataType_Int32:
         return buffer.value
-    elif data_type.value == 6:  # String
+    elif data_type.value == kEdsDataType_String:
         return buffer.value.decode("utf-8").rstrip("\x00")  # type: ignore
+    elif data_type.value == kEdsDataType_Rational:
+        return {"numerator": buffer.numerator, "denominator": buffer.denominator}
+    elif data_type.value == kEdsDataType_Point:
+        return {"x": buffer.x, "y": buffer.y}
+    elif data_type.value == kEdsDataType_Rect:
+        return {
+            "x": buffer.x,
+            "y": buffer.y,
+            "width": buffer.width,
+            "height": buffer.height,
+        }
+    elif data_type.value == kEdsDataType_Time:
+        return {
+            "year": buffer.year,
+            "month": buffer.month,
+            "day": buffer.day,
+            "hour": buffer.hour,
+            "minute": buffer.minute,
+            "second": buffer.second,
+            "milliseconds": buffer.milliseconds,
+        }
+    elif data_type.value == kEdsDataType_FocusInfo:
+        # Simplified - only returning basic info
+        return {"imageRect": buffer.imageRect, "pointNumber": buffer.pointNumber}
+    elif data_type.value == kEdsDataType_PictureStyleDesc:
+        return {
+            "contrast": buffer.contrast,
+            "sharpness": buffer.sharpness,
+            "saturation": buffer.saturation,
+            "colorTone": buffer.colorTone,
+            "filterEffect": buffer.filterEffect,
+            "toningEffect": buffer.toningEffect,
+            "sharpFineness": buffer.sharpFineness,
+            "sharpThreshold": buffer.sharpThreshold,
+        }
     else:
         return buffer.value
