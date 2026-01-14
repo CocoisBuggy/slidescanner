@@ -173,7 +173,10 @@ class CameraManager:
 
                 # When saving to Host, set capacity to indicate available space
                 from .camera_core.sdk import EdsCapacity
-                capacity = EdsCapacity(numberOfFreeClusters=0x7FFFFFFF, bytesPerSector=0x1000, reset=True)
+
+                capacity = EdsCapacity(
+                    numberOfFreeClusters=0x7FFFFFFF, bytesPerSector=0x1000, reset=True
+                )
                 err = edsdk.EdsSetCapacity(self.camera, capacity)
                 if err != EDS_ERR_OK:
                     print(f"Failed to set capacity: {err}")
@@ -302,13 +305,25 @@ class CameraManager:
         """Take a picture using the camera."""
         print("Taking picture...")
         # Use PressShutter instead of TakePicture command for better compatibility
-        err = edsdk.EdsSendCommand(self.camera, kEdsCameraCommand_PressShutterButton, kEdsCameraCommand_ShutterButton_Completely_NonAF)
+        err = edsdk.EdsSendCommand(
+            self.camera,
+            kEdsCameraCommand_PressShutterButton,
+            kEdsCameraCommand_ShutterButton_Completely_NonAF,
+        )
         if err != EDS_ERR_OK:
             # Release the shutter button
-            edsdk.EdsSendCommand(self.camera, kEdsCameraCommand_PressShutterButton, kEdsCameraCommand_ShutterButton_OFF)
+            edsdk.EdsSendCommand(
+                self.camera,
+                kEdsCameraCommand_PressShutterButton,
+                kEdsCameraCommand_ShutterButton_OFF,
+            )
             raise CameraException(err)
         # Release the shutter button
-        err = edsdk.EdsSendCommand(self.camera, kEdsCameraCommand_PressShutterButton, kEdsCameraCommand_ShutterButton_OFF)
+        err = edsdk.EdsSendCommand(
+            self.camera,
+            kEdsCameraCommand_PressShutterButton,
+            kEdsCameraCommand_ShutterButton_OFF,
+        )
         if err != EDS_ERR_OK:
             raise CameraException(err)
         print("Picture taken successfully")
@@ -325,7 +340,9 @@ class CameraManager:
         if err != EDS_ERR_OK:
             raise CameraException(err)
 
-        print(f"Downloading file: {dir_item_info.szFileName.decode('utf-8')}, size: {dir_item_info.size}, format: {dir_item_info.format}")
+        print(
+            f"Downloading file: {dir_item_info.szFileName.decode('utf-8')}, size: {dir_item_info.size}, format: {dir_item_info.format}"
+        )
 
         # Map format to file extension
         format_to_extension = {
@@ -334,16 +351,19 @@ class CameraManager:
             0x00000002: ".crw",  # kEdsImageType_CRW
             0x00000004: ".raw",  # kEdsImageType_RAW
             0x00000006: ".cr2",  # kEdsImageType_CR2
-            0x00000008: ".heif", # kEdsImageType_HEIF
-            0xB108: ".cr3",      # kEdsObjectFormat_CR3
+            0x00000008: ".heif",  # kEdsImageType_HEIF
+            0xB108: ".cr3",  # kEdsObjectFormat_CR3
         }
 
         # Get appropriate extension, default to .jpg
         extension = format_to_extension.get(dir_item_info.format, ".jpg")
-        print(f"Detected format: 0x{dir_item_info.format:08X}, using extension: {extension}")
+        print(
+            f"Detected format: 0x{dir_item_info.format:08X}, using extension: {extension}"
+        )
 
         # Create output directory if it doesn't exist
         import os
+
         output_dir = "captured_images"
         os.makedirs(output_dir, exist_ok=True)
 
@@ -354,6 +374,7 @@ class CameraManager:
         else:
             # Fallback if no state available
             import datetime
+
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"image_{timestamp}{extension}"
 
@@ -396,7 +417,7 @@ class CameraManager:
 
             # Write to file manually
             print(f"Writing {len(data)} bytes to file: {filepath}")
-            with open(filepath, 'wb') as f:
+            with open(filepath, "wb") as f:
                 f.write(data)
 
             # Check if file was actually written

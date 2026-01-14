@@ -11,6 +11,7 @@ class SharedState(GObject.Object):
 
     camera: EdsCameraRef | None = None
     camera_name: str | None = None
+    battery_level: int | None = None  # Battery level 0-100 or None
 
     # Cassette context
     cassette_name: str = ""
@@ -25,10 +26,15 @@ class SharedState(GObject.Object):
             None,
             (str,),  # camera_name
         ),
+        "battery-level-changed": (
+            GObject.SignalFlags.RUN_FIRST,
+            None,
+            (GObject.TYPE_PYOBJECT,),  # battery_level: int or None
+        ),
         "cassette-context-changed": (
             GObject.SignalFlags.RUN_FIRST,
             None,
-            (),  # No parameters - just notification
+            (),
         ),
     }
 
@@ -43,6 +49,7 @@ class SharedState(GObject.Object):
 
         if self.camera is None:
             self.camera_name = None
+            self.battery_level = None
         else:
             self.camera_manager.open_session(cam)
             import time
@@ -61,7 +68,27 @@ class SharedState(GObject.Object):
             self.camera_name = dev_info.szDeviceDescription.decode("utf8")
             print(f"Active camera name: {self.camera_name}")
 
+            # Get initial battery level
+            try:
+                from .camera_core import EdsPropertyIDEnum
+
+                battery_level = self.camera_manager.get_property_value(
+                    EdsPropertyIDEnum.BatteryLevel.value
+                )
+                if battery_level is not None:
+                    from .camera_core.properties import battery_level_to_percentage
+
+                    percentage = battery_level_to_percentage(battery_level)
+                    self.set_battery_level(percentage)
+            except Exception as e:
+                print(f"Failed to get initial battery level: {e}")
+
         self.emit("camera-name", self.camera_name)
+
+    def set_battery_level(self, level: int | None):
+        """Set the battery level (0-100 or None for unknown/AC)."""
+        self.battery_level = level
+        self.emit("battery-level-changed", level)
 
     def set_cassette_name(self, name: str):
         """Set the current cassette name."""

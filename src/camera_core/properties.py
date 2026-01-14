@@ -26,6 +26,45 @@ from .sdk import (
 )
 
 
+# Battery level constants
+class EdsBatteryLevel2(Enum):
+    Empty = 0
+    Low = 9
+    Quarter = 19
+    Half = 49
+    Hi = 69
+    Normal = 80
+    Error = 0
+    BCLevel = 0
+    AC = 0xFFFFFFFF
+    Unknown = 0xFFFFFFFE
+
+
+def battery_level_to_percentage(level: int) -> int | None:
+    """Convert EDSDK battery level to percentage."""
+    if level == EdsBatteryLevel2.AC.value:
+        return 100  # AC power, treat as full
+    elif level == EdsBatteryLevel2.Unknown.value:
+        return None  # Unknown
+    elif level == EdsBatteryLevel2.Error.value:
+        return None  # Error
+    elif level == EdsBatteryLevel2.Empty.value:
+        return 0
+    elif level == EdsBatteryLevel2.Low.value:
+        return 10
+    elif level == EdsBatteryLevel2.Quarter.value:
+        return 25
+    elif level == EdsBatteryLevel2.Half.value:
+        return 50
+    elif level == EdsBatteryLevel2.Hi.value:
+        return 70
+    elif level == EdsBatteryLevel2.Normal.value:
+        return 100
+    else:
+        # Fallback for unknown values
+        return None
+
+
 # Property IDs
 class EdsPropertyIDEnum(Enum):
     Unknown = 0x0000FFFF
@@ -190,6 +229,14 @@ def _property_callback(event, property_id: int, param, context):
                     data = _extract_property_data(manager.camera, property_id)
                     results[property] = data
                     print(f"Got data: {data}")
+
+                    # Special handling for battery level
+                    if property == EdsPropertyIDEnum.BatteryLevel:
+                        from src.camera import _global_shared_state
+
+                        if _global_shared_state:
+                            _global_shared_state.set_battery_level(data)
+
                 except Exception as e:
                     print(f"Failed to extract property data: {e}")
         except Exception as e:
@@ -267,6 +314,9 @@ def _extract_property_data(camera, property_id):
 
     # Extract the value based on data type
     if data_type.value == kEdsDataType_UInt32:
+        # Special handling for BatteryLevel
+        if property_id == EdsPropertyIDEnum.BatteryLevel.value:
+            return battery_level_to_percentage(buffer.value)
         return buffer.value
     elif data_type.value == kEdsDataType_Int32:
         return buffer.value

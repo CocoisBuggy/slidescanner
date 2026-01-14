@@ -32,8 +32,14 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         self.ui.create_main_content()
 
         # Connect signals
-        self.shared_state.connect("camera-name", self.event_handlers.on_camera_name_changed)
-        self.event_handlers.on_camera_name_changed(self.shared_state, self.shared_state.camera_name)
+        self.shared_state.connect(
+            "camera-name", self.event_handlers.on_camera_name_changed
+        )
+        self.event_handlers.on_camera_name_changed(
+            self.shared_state, self.shared_state.camera_name
+        )
+
+        self.shared_state.connect("battery-level-changed", self.ui.update_battery_level)
 
         self.shared_state.connect(
             "cassette-context-changed", self.event_handlers.on_cassette_context_changed
@@ -42,5 +48,3 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
 
         # Set up keyboard shortcuts
         self.shortcuts_handler.setup_shortcuts()
-
-

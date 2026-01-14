@@ -304,7 +304,10 @@ if edsdk is not None:
     edsdk.EdsSetCapacity.restype = EdsError
     edsdk.EdsSetCapacity.argtypes = [EdsCameraRef, EdsCapacity]
     edsdk.EdsGetDirectoryItemInfo.restype = EdsError
-    edsdk.EdsGetDirectoryItemInfo.argtypes = [EdsDirectoryItemRef, ctypes.POINTER(EdsDirectoryItemInfo)]
+    edsdk.EdsGetDirectoryItemInfo.argtypes = [
+        EdsDirectoryItemRef,
+        ctypes.POINTER(EdsDirectoryItemInfo),
+    ]
     edsdk.EdsCopyData.restype = EdsError
     edsdk.EdsCopyData.argtypes = [EdsStreamRef, EdsUInt64, EdsStreamRef]
     edsdk.EdsGetEvent.restype = EdsError

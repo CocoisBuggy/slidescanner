@@ -31,6 +31,7 @@ class SlideScannerApplication(Gtk.Application):
 
         # Load settings
         from .settings import Settings
+
         self.settings = Settings()
         self.state.photo_location = self.settings.photo_location
 

@@ -82,6 +82,7 @@ class ShortcutsHandler:
     def open_settings(self):
         """Handle Ctrl+S: Open settings."""
         from src.settings import SettingsDialog
+
         dialog = SettingsDialog(self.window, self.window.shared_state)
         dialog.present()
 

@@ -1,7 +1,6 @@
 import gi
 
 gi.require_version("Gtk", "4.0")
-gi.require_version("Gdk", "4.0")
 
 from gi.repository import Gtk
 
@@ -12,6 +11,7 @@ class UIComponents:
     def __init__(self, window):
         self.window = window
         self.camera_controls = CameraControls(window)
+        self.battery_label = None
 
     def create_header_bar(self):
         header_bar = Gtk.HeaderBar()
@@ -23,6 +23,13 @@ class UIComponents:
         header_bar.pack_end(menu_button)
 
         return header_bar
+
+    def update_battery_level(self, signal_source, level):
+        if self.battery_label:
+            if level is None or level == -1:
+                self.battery_label.set_label("Battery: --%")
+            else:
+                self.battery_label.set_markup(f"Battery: <b>{level}%</b>")
 
     def create_menu_model(self):
         menu_builder = Gtk.Builder()
@@ -80,7 +87,9 @@ class UIComponents:
         toolbar.append(capture_btn)
 
         settings_btn = Gtk.Button(label="Settings")
-        settings_btn.connect("clicked", lambda btn: self.window.shortcuts_handler.open_settings())
+        settings_btn.connect(
+            "clicked", lambda btn: self.window.shortcuts_handler.open_settings()
+        )
         toolbar.append(settings_btn)
 
         shortcuts_btn = Gtk.Button(label="Shortcuts")
@@ -88,6 +97,15 @@ class UIComponents:
             "clicked", lambda btn: self.window.shortcuts_handler.show_shortcuts_dialog()
         )
         toolbar.append(shortcuts_btn)
+
+        # Spacer to push battery label to the far right
+        spacer = Gtk.Box()
+        spacer.set_hexpand(True)
+        toolbar.append(spacer)
+
+        # Battery label on the far right
+        self.battery_label = Gtk.Label(label="Battery: --%")
+        toolbar.append(self.battery_label)
 
         return toolbar
 
@@ -205,15 +223,11 @@ class UIComponents:
         right_panel.set_margin_top(12)
         right_panel.set_margin_bottom(12)
 
-        preview_frame = Gtk.Frame(label="Preview")
+        preview_frame = Gtk.Frame()
         preview_frame.set_hexpand(True)
         right_panel.append(preview_frame)
 
         preview_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        preview_box.set_margin_top(6)
-        preview_box.set_margin_bottom(6)
-        preview_box.set_margin_start(6)
-        preview_box.set_margin_end(6)
         preview_frame.set_child(preview_box)
 
         self.window.live_view_image = Gtk.Picture()
