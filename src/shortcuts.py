@@ -76,6 +76,7 @@ class ShortcutsHandler:
         except Exception as e:
             print(f"Failed to capture image: {e}")
             # TODO: Show error dialog to user
+
         # These should be written to EXIF metadata
         # For now, just print a message
 
@@ -95,6 +96,9 @@ class ShortcutsHandler:
         """Handle Ctrl+N: Move to next cassette."""
         print("Next cassette shortcut triggered")
         self.window.shared_state.next_cassette()
+        # Focus the cassette name entry for user input
+        if hasattr(self.window, 'cassette_name_entry') and self.window.cassette_name_entry:
+            self.window.cassette_name_entry.grab_focus()
 
     def set_quality_rating(self, rating):
         """Set quality rating (1-5 stars)."""

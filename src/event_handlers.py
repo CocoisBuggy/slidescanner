@@ -13,15 +13,24 @@ class EventHandlers:
     def on_cassette_context_changed(self, shared_state):
         """Update UI when cassette context changes."""
         if self.window.cassette_name_entry:
-            self.window.cassette_name_entry.set_text(
-                self.window.shared_state.cassette_name
-            )
+            # Only update if the text is different to avoid recursion
+            current_text = self.window.cassette_name_entry.get_text()
+            if current_text != self.window.shared_state.cassette_name:
+                self.window.cassette_name_entry.set_text(
+                    self.window.shared_state.cassette_name
+                )
         if self.window.cassette_date_entry:
-            self.window.cassette_date_entry.set_text(
-                self.window.shared_state.cassette_date
-            )
+            # Only update if the text is different to avoid recursion
+            current_text = self.window.cassette_date_entry.get_text()
+            if current_text != self.window.shared_state.cassette_date:
+                self.window.cassette_date_entry.set_text(
+                    self.window.shared_state.cassette_date
+                )
         if self.window.slide_label_entry:
-            self.window.slide_label_entry.set_text(self.window.shared_state.slide_label)
+            # Only update if the text is different to avoid recursion
+            current_text = self.window.slide_label_entry.get_text()
+            if current_text != self.window.shared_state.slide_label:
+                self.window.slide_label_entry.set_text(self.window.shared_state.slide_label)
 
         if self.window.quality_label:
             # Display quality as stars

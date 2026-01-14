@@ -116,15 +116,10 @@ class SharedState(GObject.Object):
         # Reset slide counter for new cassette
         self.slide_counter = 0
 
-        # If no custom cassette name is set, use a default
-        if not self.cassette_name or self.cassette_name.startswith("Cassette "):
-            if not hasattr(self, "cassette_number"):
-                self.cassette_number = 1
-            else:
-                self.cassette_number += 1
-            self.cassette_name = f"Cassette {self.cassette_number}"
+        # Clear cassette name for user input
+        self.cassette_name = ""
 
-        # Reset other context but keep the cassette name
+        # Reset other context
         self.cassette_date = ""
         self.slide_label = ""
         self.quality_rating = 3
