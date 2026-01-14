@@ -1,3 +1,5 @@
+import pathlib
+
 from gi.repository import GObject
 
 from src.camera import CameraManager
@@ -33,6 +35,7 @@ class SharedState(GObject.Object):
     def __init__(self, camera_manager: CameraManager):
         super().__init__()
         self.camera_manager = camera_manager
+        self.photo_location = str(pathlib.Path.home() / "Pictures")
 
     def set_camera(self, cam: EdsCameraRef | None):
         print(f"setting active camera {cam}")

@@ -80,6 +80,7 @@ class UIComponents:
         toolbar.append(capture_btn)
 
         settings_btn = Gtk.Button(label="Settings")
+        settings_btn.connect("clicked", lambda btn: self.window.shortcuts_handler.open_settings())
         toolbar.append(settings_btn)
 
         shortcuts_btn = Gtk.Button(label="Shortcuts")

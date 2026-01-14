@@ -81,8 +81,9 @@ class ShortcutsHandler:
 
     def open_settings(self):
         """Handle Ctrl+S: Open settings."""
-        print("Open settings shortcut triggered")
-        # TODO: Implement settings dialog
+        from src.settings import SettingsDialog
+        dialog = SettingsDialog(self.window, self.window.shared_state)
+        dialog.present()
 
     def quit_application(self):
         """Handle Ctrl+Q: Quit application."""
