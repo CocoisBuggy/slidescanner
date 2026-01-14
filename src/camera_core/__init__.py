@@ -24,6 +24,9 @@ from .sdk import (
     EdsCameraAddedHandler,
     edsdk,
     kEdsCameraCommand_TakePicture,
+    kEdsCameraCommand_PressShutterButton,
+    kEdsCameraCommand_ShutterButton_Completely_NonAF,
+    kEdsCameraCommand_ShutterButton_OFF,
     kEdsObjectEvent_DirItemCreated,
 )
 
@@ -52,6 +55,9 @@ __all__ = [
     "EdsCameraAddedHandler",
     "edsdk",
     "kEdsCameraCommand_TakePicture",
+    "kEdsCameraCommand_PressShutterButton",
+    "kEdsCameraCommand_ShutterButton_Completely_NonAF",
+    "kEdsCameraCommand_ShutterButton_OFF",
     "kEdsObjectEvent_DirItemCreated",
     "_property_callback",
     "CameraException",

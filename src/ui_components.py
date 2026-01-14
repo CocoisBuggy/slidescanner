@@ -76,6 +76,7 @@ class UIComponents:
         toolbar.set_spacing(6)
 
         capture_btn = Gtk.Button(label="Capture")
+        capture_btn.connect("clicked", self.on_capture_clicked)
         toolbar.append(capture_btn)
 
         settings_btn = Gtk.Button(label="Settings")
@@ -88,6 +89,10 @@ class UIComponents:
         toolbar.append(shortcuts_btn)
 
         return toolbar
+
+    def on_capture_clicked(self, button):
+        """Handle capture button click."""
+        self.window.shortcuts_handler.capture_image()
 
     def create_content_area(self):
         content_area = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)

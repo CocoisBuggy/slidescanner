@@ -6,6 +6,9 @@ from .camera_core import (
     CameraException,
     kEdsPropertyEvent_PropertyChanged,
     kEdsCameraCommand_TakePicture,
+    kEdsCameraCommand_PressShutterButton,
+    kEdsCameraCommand_ShutterButton_Completely_NonAF,
+    kEdsCameraCommand_ShutterButton_OFF,
     kEdsObjectEvent_DirItemCreated,
     edsdk,
     EdsCameraListRef,
@@ -163,8 +166,18 @@ class CameraManager:
             try:
                 from .camera_core import EdsPropertyIDEnum
 
-                self.set_property_value(EdsPropertyIDEnum.SaveTo, 2)
+                self.set_property_value(EdsPropertyIDEnum.SaveTo, 2)  # Host = PC only
                 print("Set save destination to PC")
+
+                # When saving to Host, set capacity to indicate available space
+                from .camera_core.sdk import EdsCapacity
+                capacity = EdsCapacity(numberOfFreeClusters=0x7FFFFFFF, bytesPerSector=0x1000, reset=True)
+                err = edsdk.EdsSetCapacity(self.camera, capacity)
+                if err != EDS_ERR_OK:
+                    print(f"Failed to set capacity: {err}")
+                else:
+                    print("Set capacity for host storage")
+
             except Exception as e:
                 print(f"Failed to set save destination: {e}")
 
@@ -286,7 +299,14 @@ class CameraManager:
     def take_picture(self):
         """Take a picture using the camera."""
         print("Taking picture...")
-        err = edsdk.EdsSendCommand(self.camera, kEdsCameraCommand_TakePicture, 0)
+        # Use PressShutter instead of TakePicture command for better compatibility
+        err = edsdk.EdsSendCommand(self.camera, kEdsCameraCommand_PressShutterButton, kEdsCameraCommand_ShutterButton_Completely_NonAF)
+        if err != EDS_ERR_OK:
+            # Release the shutter button
+            edsdk.EdsSendCommand(self.camera, kEdsCameraCommand_PressShutterButton, kEdsCameraCommand_ShutterButton_OFF)
+            raise CameraException(err)
+        # Release the shutter button
+        err = edsdk.EdsSendCommand(self.camera, kEdsCameraCommand_PressShutterButton, kEdsCameraCommand_ShutterButton_OFF)
         if err != EDS_ERR_OK:
             raise CameraException(err)
         print("Picture taken successfully")

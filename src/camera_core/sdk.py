@@ -83,6 +83,15 @@ class EdsRect(ctypes.Structure):
     ]
 
 
+# Define EdsCapacity struct
+class EdsCapacity(ctypes.Structure):
+    _fields_ = [
+        ("numberOfFreeClusters", EdsInt32),
+        ("bytesPerSector", EdsInt32),
+        ("reset", ctypes.c_bool),
+    ]
+
+
 # Define EdsTime struct
 class EdsTime(ctypes.Structure):
     _fields_ = [
@@ -199,6 +208,9 @@ kEdsPropertyEvent_PropertyChanged = 0x00000101
 
 # Camera commands
 kEdsCameraCommand_TakePicture = 0x00000000
+kEdsCameraCommand_PressShutterButton = 0x00000004
+kEdsCameraCommand_ShutterButton_Completely_NonAF = 0x00010003
+kEdsCameraCommand_ShutterButton_OFF = 0x00000000
 
 # Object events
 kEdsObjectEvent_DirItemCreated = 0x00000204
@@ -261,5 +273,7 @@ if edsdk is not None:
     ]
     edsdk.EdsDownloadComplete.restype = EdsError
     edsdk.EdsDownloadComplete.argtypes = [EdsBaseRef]
+    edsdk.EdsSetCapacity.restype = EdsError
+    edsdk.EdsSetCapacity.argtypes = [EdsCameraRef, EdsCapacity]
     edsdk.EdsGetEvent.restype = EdsError
     edsdk.EdsGetEvent.argtypes = [EdsCameraRef, ctypes.POINTER(EdsUInt32)]
