@@ -15,6 +15,7 @@ class SharedState(GObject.Object):
     cassette_date: str = ""  # Year
     slide_label: str = ""
     quality_rating: int = 3  # Default 3-star rating
+    slide_counter: int = 0  # Sequential counter for slides within cassette
 
     __gsignals__ = {
         "camera-name": (
@@ -80,17 +81,30 @@ class SharedState(GObject.Object):
             self.emit("cassette-context-changed")
 
     def next_cassette(self):
-        """Move to the next cassette (increment cassette number)."""
-        # For now, just clear the current context and increment a cassette counter
-        # In a real implementation, you might want to save the current cassette first
-        if not hasattr(self, 'cassette_counter'):
-            self.cassette_counter = 1
-        else:
-            self.cassette_counter += 1
+        """Move to the next cassette (increment cassette number and reset counter)."""
+        # Reset slide counter for new cassette
+        self.slide_counter = 0
 
-        # Reset context for new cassette
-        self.cassette_name = f"Cassette {self.cassette_counter}"
+        # If no custom cassette name is set, use a default
+        if not self.cassette_name or self.cassette_name.startswith("Cassette "):
+            if not hasattr(self, 'cassette_number'):
+                self.cassette_number = 1
+            else:
+                self.cassette_number += 1
+            self.cassette_name = f"Cassette {self.cassette_number}"
+
+        # Reset other context but keep the cassette name
         self.cassette_date = ""
         self.slide_label = ""
         self.quality_rating = 3
         self.emit("cassette-context-changed")
+
+    def get_next_slide_filename(self):
+        """Get the next sequential filename for the current cassette."""
+        self.slide_counter += 1
+        cassette_name = self.cassette_name.strip()
+        if not cassette_name:
+            cassette_name = "Unknown"
+        # Replace spaces and special characters with underscores
+        safe_name = "".join(c if c.isalnum() or c in "._-" else "_" for c in cassette_name)
+        return f"{safe_name}_{self.slide_counter:03d}.jpg"

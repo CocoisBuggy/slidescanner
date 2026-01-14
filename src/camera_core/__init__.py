@@ -4,6 +4,10 @@ import os
 from .err import EDS_ERR_OK, ERROR_CODE_NAMES
 from .properties import EdsPropertyIDEnum
 
+# Define constants before library loading
+kEdsPropertyEvent_PropertyChanged = 0x00000101
+kEdsCameraCommand_TakePicture = 0x00000000
+kEdsObjectEvent_DirItemCreated = 0x00000204
 
 __all__ = [
     "EdsPropertyIDEnum", "EDS_ERR_OK", "ERROR_CODE_NAMES",
@@ -11,8 +15,8 @@ __all__ = [
     "EdsEvfImageRef", "EdsStreamRef", "EdsDirectoryItemRef",
     "EdsInt32", "EdsUInt32", "EdsInt64", "EdsUInt64",
     "EdsPropertyID", "EdsPropertyEvent", "kEdsPropertyEvent_PropertyChanged",
-    "EdsDeviceInfo", "EdsPropertyEventHandler", "EdsCameraAddedHandler",
-    "edsdk", "CameraException"
+    "EdsDeviceInfo", "EdsPropertyEventHandler", "EdsObjectEventHandler", "EdsCameraAddedHandler",
+    "edsdk", "CameraException", "kEdsCameraCommand_TakePicture", "kEdsObjectEvent_DirItemCreated"
 ]
 
 # Load EDSDK library
@@ -29,7 +33,11 @@ lib_path = os.path.join(
     "x86_64",
     "libEDSDK.so",
 )
-edsdk = ctypes.CDLL(lib_path)
+try:
+    edsdk = ctypes.CDLL(lib_path)
+except OSError:
+    # Handle case where library is not available (e.g., testing environment)
+    edsdk = None
 
 # Define types
 EdsError = ctypes.c_uint32
@@ -64,75 +72,98 @@ class EdsDeviceInfo(ctypes.Structure):
 EdsPropertyEventHandler = ctypes.CFUNCTYPE(
     EdsError, EdsPropertyEvent, EdsPropertyID, EdsUInt32, ctypes.c_void_p
 )
+EdsObjectEventHandler = ctypes.CFUNCTYPE(
+    EdsError, EdsUInt32, EdsBaseRef, ctypes.c_void_p
+)
 EdsCameraAddedHandler = ctypes.CFUNCTYPE(EdsError, ctypes.c_void_p)
 
 # Function prototypes
-edsdk.EdsInitializeSDK.restype = EdsError
-edsdk.EdsTerminateSDK.restype = EdsError
-edsdk.EdsGetCameraList.restype = EdsError
-edsdk.EdsGetCameraList.argtypes = [ctypes.POINTER(EdsCameraListRef)]
-edsdk.EdsGetChildCount.restype = EdsError
-edsdk.EdsGetChildCount.argtypes = [EdsBaseRef, ctypes.POINTER(EdsUInt32)]
-edsdk.EdsGetChildAtIndex.restype = EdsError
-edsdk.EdsGetChildAtIndex.argtypes = [
-    EdsBaseRef,
-    EdsUInt32,
-    ctypes.POINTER(EdsCameraRef),
-]
-edsdk.EdsGetDeviceInfo.restype = EdsError
-edsdk.EdsGetDeviceInfo.argtypes = [EdsCameraRef, ctypes.POINTER(EdsDeviceInfo)]
-edsdk.EdsOpenSession.restype = EdsError
-edsdk.EdsOpenSession.argtypes = [EdsCameraRef]
-edsdk.EdsCloseSession.restype = EdsError
-edsdk.EdsCloseSession.argtypes = [EdsCameraRef]
-edsdk.EdsRelease.restype = EdsError
-edsdk.EdsRelease.argtypes = [EdsBaseRef]
-edsdk.EdsSetPropertyEventHandler.restype = EdsError
-edsdk.EdsSetPropertyEventHandler.argtypes = [
-    EdsCameraRef,
-    EdsPropertyEvent,
-    EdsPropertyEventHandler,
-    ctypes.py_object,
-]
-edsdk.EdsGetPropertyData.restype = EdsError
-edsdk.EdsGetPropertyData.argtypes = [
-    EdsCameraRef,
-    EdsPropertyID,
-    EdsUInt32,
-    EdsUInt32,
-    ctypes.c_void_p,
-]
-edsdk.EdsSetPropertyData.restype = EdsError
-edsdk.EdsSetPropertyData.argtypes = [
-    EdsCameraRef,
-    EdsPropertyID,
-    EdsInt32,
-    EdsUInt32,
-    ctypes.c_void_p,
-]
-edsdk.EdsSetCameraAddedHandler.restype = EdsError
-edsdk.EdsSetCameraAddedHandler.argtypes = [EdsCameraAddedHandler, ctypes.c_void_p]
+if edsdk is not None:
+    edsdk.EdsInitializeSDK.restype = EdsError
+    edsdk.EdsTerminateSDK.restype = EdsError
+    edsdk.EdsTerminateSDK.argtypes = []
+    edsdk.EdsGetCameraList.restype = EdsError
+    edsdk.EdsGetCameraList.argtypes = [ctypes.POINTER(EdsCameraListRef)]
+    edsdk.EdsGetChildCount.restype = EdsError
+    edsdk.EdsGetChildCount.argtypes = [EdsBaseRef, ctypes.POINTER(EdsUInt32)]
+    edsdk.EdsGetChildAtIndex.restype = EdsError
+    edsdk.EdsGetChildAtIndex.argtypes = [
+        EdsBaseRef,
+        EdsUInt32,
+        ctypes.POINTER(EdsCameraRef),
+    ]
+    edsdk.EdsGetDeviceInfo.restype = EdsError
+    edsdk.EdsGetDeviceInfo.argtypes = [EdsCameraRef, ctypes.POINTER(EdsDeviceInfo)]
+    edsdk.EdsOpenSession.restype = EdsError
+    edsdk.EdsOpenSession.argtypes = [EdsCameraRef]
+    edsdk.EdsCloseSession.restype = EdsError
+    edsdk.EdsCloseSession.argtypes = [EdsCameraRef]
+    edsdk.EdsRelease.restype = EdsError
+    edsdk.EdsRelease.argtypes = [EdsBaseRef]
+    edsdk.EdsSetPropertyEventHandler.restype = EdsError
+    edsdk.EdsSetPropertyEventHandler.argtypes = [
+        EdsCameraRef,
+        EdsPropertyEvent,
+        EdsPropertyEventHandler,
+        ctypes.py_object,
+    ]
+    edsdk.EdsGetPropertyData.restype = EdsError
+    edsdk.EdsGetPropertyData.argtypes = [
+        EdsCameraRef,
+        EdsPropertyID,
+        EdsUInt32,
+        EdsUInt32,
+        ctypes.c_void_p,
+    ]
+    edsdk.EdsSetPropertyData.restype = EdsError
+    edsdk.EdsSetPropertyData.argtypes = [
+        EdsCameraRef,
+        EdsPropertyID,
+        EdsInt32,
+        EdsUInt32,
+        ctypes.c_void_p,
+    ]
+    edsdk.EdsSetCameraAddedHandler.restype = EdsError
+    edsdk.EdsSetCameraAddedHandler.argtypes = [EdsCameraAddedHandler, ctypes.c_void_p]
+    edsdk.EdsSendCommand.restype = EdsError
+    edsdk.EdsSendCommand.argtypes = [EdsCameraRef, EdsUInt32, EdsInt32]
+    edsdk.EdsSetObjectEventHandler.restype = EdsError
+    edsdk.EdsSetObjectEventHandler.argtypes = [EdsCameraRef, EdsUInt32, EdsObjectEventHandler, ctypes.c_void_p]
 
 # Property event constants
 kEdsPropertyEvent_PropertyChanged = 0x00000101
 
+# Camera commands
+kEdsCameraCommand_TakePicture = 0x00000000
+
+# Object events
+kEdsObjectEvent_DirItemCreated = 0x00000204
+
 # Global references to avoid GC
 _property_handler = None
+_object_handler = None
 _camera_added_handler = None
 
 # Additional function prototypes
-edsdk.EdsCreateEvfImageRef.restype = EdsError
-edsdk.EdsCreateEvfImageRef.argtypes = [EdsStreamRef, ctypes.POINTER(EdsEvfImageRef)]
-edsdk.EdsDownloadEvfImage.restype = EdsError
-edsdk.EdsDownloadEvfImage.argtypes = [EdsCameraRef, EdsEvfImageRef]
-edsdk.EdsCreateMemoryStream.restype = EdsError
-edsdk.EdsCreateMemoryStream.argtypes = [EdsUInt64, ctypes.POINTER(EdsStreamRef)]
-edsdk.EdsDownload.restype = EdsError
-edsdk.EdsDownload.argtypes = [EdsBaseRef, EdsUInt64, EdsStreamRef]
-edsdk.EdsGetPointer.restype = EdsError
-edsdk.EdsGetPointer.argtypes = [EdsStreamRef, ctypes.POINTER(ctypes.c_void_p)]
-edsdk.EdsGetLength.restype = EdsError
-edsdk.EdsGetLength.argtypes = [EdsStreamRef, ctypes.POINTER(EdsUInt64)]
+if edsdk is not None:
+    edsdk.EdsCreateEvfImageRef.restype = EdsError
+    edsdk.EdsCreateEvfImageRef.argtypes = [EdsStreamRef, ctypes.POINTER(EdsEvfImageRef)]
+    edsdk.EdsDownloadEvfImage.restype = EdsError
+    edsdk.EdsDownloadEvfImage.argtypes = [EdsCameraRef, EdsEvfImageRef]
+    edsdk.EdsCreateMemoryStream.restype = EdsError
+    edsdk.EdsCreateMemoryStream.argtypes = [EdsUInt64, ctypes.POINTER(EdsStreamRef)]
+    edsdk.EdsDownload.restype = EdsError
+    edsdk.EdsDownload.argtypes = [EdsBaseRef, EdsUInt64, EdsStreamRef]
+    edsdk.EdsGetPointer.restype = EdsError
+    edsdk.EdsGetPointer.argtypes = [EdsStreamRef, ctypes.POINTER(ctypes.c_void_p)]
+    edsdk.EdsGetLength.restype = EdsError
+    edsdk.EdsGetLength.argtypes = [EdsStreamRef, ctypes.POINTER(EdsUInt64)]
+    edsdk.EdsCreateFileStream.restype = EdsError
+    edsdk.EdsCreateFileStream.argtypes = [ctypes.c_char_p, EdsUInt32, EdsUInt32, ctypes.POINTER(EdsStreamRef)]
+    edsdk.EdsDownloadComplete.restype = EdsError
+    edsdk.EdsDownloadComplete.argtypes = [EdsBaseRef]
+    edsdk.EdsGetEvent.restype = EdsError
+    edsdk.EdsGetEvent.argtypes = [EdsCameraRef, ctypes.POINTER(EdsUInt32)]
 
 
 class CameraException(Exception):

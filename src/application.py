@@ -1,4 +1,5 @@
 import time
+import ctypes
 from threading import Event, Thread
 import gi
 
@@ -26,6 +27,7 @@ class SlideScannerApplication(Gtk.Application):
 
         self.camera_manager = CameraManager()
         self.state = SharedState(self.camera_manager)
+        self.camera_watcher = None
 
     def do_activate(self):
         # Initialize camera manager
@@ -38,6 +40,10 @@ class SlideScannerApplication(Gtk.Application):
         camera_status = "EDSDK initialized, waiting for camera..."
         print(camera_status)
 
+        # Set global references for callbacks
+        from src.camera import _global_shared_state
+        _global_shared_state = self.state
+
         def camera_watcher():
             print("Starting camera watcher")
 
@@ -45,7 +51,13 @@ class SlideScannerApplication(Gtk.Application):
                 time.sleep(0.05)
 
                 if self.state.camera is not None:
-                    # We have a camera, we chilling.
+                    # We have a camera, process events and chill
+                    # Need to call EdsGetEvent regularly to process camera events
+                    from src.camera_core import edsdk, EdsUInt32
+                    if edsdk:
+                        event = EdsUInt32()
+                        edsdk.EdsGetEvent(self.state.camera, ctypes.byref(event))
+                        # Process events - the event callbacks should be triggered
                     continue
 
                 if not self.camera_manager.get_camera_count():

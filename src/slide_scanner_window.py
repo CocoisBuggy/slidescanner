@@ -82,12 +82,22 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
     def capture_image(self):
         """Handle Ctrl+C: Capture image."""
         print("Capture image shortcut triggered")
-        # TODO: Implement actual capture functionality
-        # When implemented, this should include cassette context metadata:
-        # - Cassette name: self.shared_state.cassette_name
-        # - Cassette date: self.shared_state.cassette_date
-        # - Slide label: self.shared_state.slide_label
-        # - Quality rating: self.shared_state.quality_rating
+
+        # Take the picture
+        try:
+            self.shared_state.camera_manager.take_picture()
+            print(f"Image captured with cassette context:")
+            print(f"  Name: {self.shared_state.cassette_name}")
+            print(f"  Date: {self.shared_state.cassette_date}")
+            print(f"  Slide: {self.shared_state.slide_label}")
+            print(f"  Quality: {self.shared_state.quality_rating} stars")
+
+            # TODO: Download the captured image and add metadata
+            # TODO: Save image with cassette context in EXIF metadata
+
+        except Exception as e:
+            print(f"Failed to capture image: {e}")
+            # TODO: Show error dialog to user
         # These should be written to EXIF metadata
         # For now, just print a message
 
@@ -130,6 +140,10 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         shortcuts_lines.append("")
         shortcuts_lines.append("Quality Rating (numpad or number keys):")
         shortcuts_lines.append("• 1-5: Set quality rating (1-5 stars)")
+        shortcuts_lines.append("")
+        shortcuts_lines.append("File Naming:")
+        shortcuts_lines.append("• Images saved as: CassetteName_001.jpg, CassetteName_002.jpg, etc.")
+        shortcuts_lines.append("• Use cassette name field to set the base filename")
 
         shortcuts_text = "\n".join(shortcuts_lines)
 

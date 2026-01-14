@@ -34,6 +34,12 @@ EdsPropertyEvent = EdsUInt32
 # Property events
 kEdsPropertyEvent_PropertyChanged = EdsPropertyEvent(0x00000101)
 
+# Camera commands
+kEdsCameraCommand_TakePicture = 0x00000000
+
+# Object events
+kEdsObjectEvent_DirItemCreated = 0x00000204
+
 
 # Define EdsDeviceInfo struct
 class EdsDeviceInfo(ctypes.Structure):
@@ -55,6 +61,9 @@ class CameraException(Exception):
 # Callback types
 EdsPropertyEventHandler = ctypes.CFUNCTYPE(
     EdsError, EdsPropertyEvent, EdsPropertyID, EdsUInt32, ctypes.c_void_p
+)
+EdsObjectEventHandler = ctypes.CFUNCTYPE(
+    EdsError, EdsUInt32, EdsBaseRef, ctypes.c_void_p
 )
 EdsCameraAddedHandler = ctypes.CFUNCTYPE(EdsError, ctypes.c_void_p)
 
@@ -104,6 +113,10 @@ edsdk.EdsSetPropertyData.argtypes = [
     EdsUInt32,
     ctypes.c_void_p,
 ]
+edsdk.EdsSendCommand.restype = EdsError
+edsdk.EdsSendCommand.argtypes = [EdsCameraRef, EdsUInt32, EdsInt32]
+edsdk.EdsSetObjectEventHandler.restype = EdsError
+edsdk.EdsSetObjectEventHandler.argtypes = [EdsCameraRef, EdsUInt32, EdsObjectEventHandler, ctypes.c_void_p]
 edsdk.EdsCreateEvfImageRef.restype = EdsError
 edsdk.EdsCreateEvfImageRef.argtypes = [ctypes.POINTER(EdsEvfImageRef)]
 edsdk.EdsDownloadEvfImage.restype = EdsError
@@ -112,6 +125,10 @@ edsdk.EdsCreateMemoryStream.restype = EdsError
 edsdk.EdsCreateMemoryStream.argtypes = [EdsUInt64, ctypes.POINTER(EdsStreamRef)]
 edsdk.EdsDownload.restype = EdsError
 edsdk.EdsDownload.argtypes = [EdsBaseRef, EdsUInt64, EdsStreamRef]
+edsdk.EdsCreateFileStream.restype = EdsError
+edsdk.EdsCreateFileStream.argtypes = [ctypes.c_char_p, EdsUInt32, EdsUInt32, ctypes.POINTER(EdsStreamRef)]
+edsdk.EdsDownloadComplete.restype = EdsError
+edsdk.EdsDownloadComplete.argtypes = [EdsBaseRef]
 edsdk.EdsGetPointer.restype = EdsError
 edsdk.EdsGetPointer.argtypes = [EdsStreamRef, ctypes.POINTER(ctypes.c_void_p)]
 edsdk.EdsGetLength.restype = EdsError
