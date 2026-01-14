@@ -16,6 +16,7 @@ class SharedState(GObject.Object):
     # Cassette context
     cassette_name: str = ""
     cassette_date: str = ""  # Year
+    slide_date: str = ""  # Individual slide date (optional, overrides cassette date)
     slide_label: str = ""
     quality_rating: int = 3  # Default 3-star rating
     slide_counter: int = 0  # Sequential counter for slides within cassette
@@ -35,6 +36,11 @@ class SharedState(GObject.Object):
             GObject.SignalFlags.RUN_FIRST,
             None,
             (),
+        ),
+        "picture-taken": (
+            GObject.SignalFlags.RUN_FIRST,
+            None,
+            (str,),  # filename
         ),
     }
 
@@ -101,6 +107,11 @@ class SharedState(GObject.Object):
         self.cassette_date = date
         self.emit("cassette-context-changed")
 
+    def set_slide_date(self, date: str):
+        """Set the current slide date (optional, overrides cassette date)."""
+        self.slide_date = date
+        self.emit("cassette-context-changed")
+
     def set_slide_label(self, label: str):
         """Set the current slide label."""
         self.slide_label = label
@@ -112,6 +123,10 @@ class SharedState(GObject.Object):
             self.quality_rating = rating
             self.emit("cassette-context-changed")
 
+    def notify_picture_taken(self, filename: str):
+        """Notify that a picture has been successfully taken."""
+        self.emit("picture-taken", filename)
+
     def next_cassette(self):
         """Move to the next cassette (increment cassette number and reset counter)."""
         # Reset slide counter for new cassette
@@ -122,6 +137,7 @@ class SharedState(GObject.Object):
 
         # Reset other context
         self.cassette_date = ""
+        self.slide_date = ""
         self.slide_label = ""
         self.quality_rating = 3
         self.emit("cassette-context-changed")

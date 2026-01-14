@@ -46,6 +46,8 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         )
         self.event_handlers.on_cassette_context_changed(self.shared_state)
 
+        self.shared_state.connect("picture-taken", self.event_handlers.on_picture_taken)
+
         # Set up CSS styling for error labels
         self._setup_css()
 
@@ -59,6 +61,11 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         .error-label {
             color: #e01b24;
             font-size: 0.85em;
+        }
+        
+        .dimmed {
+            opacity: 0.5;
+            color: #888888;
         }
         """
         css_provider.load_from_data(css_data.encode())

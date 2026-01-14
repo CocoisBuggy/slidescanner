@@ -504,6 +504,11 @@ class CameraManager:
                 print(f"ERROR: File was not created: {filepath}")
 
             print(f"Image downloaded successfully: {filename}")
+
+            # Notify that picture was taken successfully
+            if _global_shared_state:
+                _global_shared_state.notify_picture_taken(filename)
+
             return filename
 
         finally:

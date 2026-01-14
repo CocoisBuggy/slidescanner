@@ -66,9 +66,25 @@ class ShortcutsHandler:
         try:
             from datetime import datetime
 
-            # Parse cassette_date string using fuzzy date parsing
+            # Parse slide date first (overrides cassette date)
+            slide_date = None
+            if self.window.shared_state.slide_date.strip():
+                from .date_utils import parse_fuzzy_date
+
+                parsed_date, error = parse_fuzzy_date(
+                    self.window.shared_state.slide_date.strip()
+                )
+                if parsed_date:
+                    slide_date = parsed_date
+                else:
+                    print(
+                        f"Warning: Could not parse slide date '{self.window.shared_state.slide_date}': {error}"
+                    )
+                    slide_date = None
+
+            # Parse cassette_date string using fuzzy date parsing (only if no slide date)
             cassette_date = None
-            if self.window.shared_state.cassette_date.strip():
+            if not slide_date and self.window.shared_state.cassette_date.strip():
                 from .date_utils import parse_fuzzy_date
 
                 parsed_date, error = parse_fuzzy_date(
@@ -82,12 +98,15 @@ class ShortcutsHandler:
                     )
                     cassette_date = None
 
+            # Use slide date if available, otherwise cassette date
+            final_date = slide_date if slide_date else cassette_date
+
             self.window.shared_state.camera_manager.take_picture(
                 CassetteItem(
                     name=self.window.shared_state.cassette_name,
                     label=self.window.shared_state.slide_label,
                     stars=self.window.shared_state.quality_rating,
-                    date=cassette_date,
+                    date=final_date,
                 )
             )
 

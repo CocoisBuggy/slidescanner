@@ -192,6 +192,28 @@ class UIComponents:
         self.window.cassette_date_status_label.set_halign(Gtk.Align.END)
         cassette_box.append(self.window.cassette_date_status_label)
 
+        # Slide date
+        slide_date_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        cassette_box.append(slide_date_box)
+
+        slide_date_label = Gtk.Label(label="Slide Date:")
+        slide_date_box.append(slide_date_label)
+
+        self.window.slide_date_entry = Gtk.Entry()
+        self.window.slide_date_entry.set_placeholder_text(
+            "e.g., 1965, Jun 1965, 15/06/1965 (optional)"
+        )
+        self.window.slide_date_entry.connect(
+            "changed", self.window.event_handlers.on_slide_date_changed
+        )
+        slide_date_box.append(self.window.slide_date_entry)
+
+        # Slide date status label (for error messages or friendly datetime display)
+        self.window.slide_date_status_label = Gtk.Label(label="")
+        self.window.slide_date_status_label.set_margin_top(4)
+        self.window.slide_date_status_label.set_halign(Gtk.Align.END)
+        cassette_box.append(self.window.slide_date_status_label)
+
         # Slide label
         slide_label_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         cassette_box.append(slide_label_box)
