@@ -2,7 +2,7 @@ from enum import Enum
 
 import ctypes
 from threading import Event
-from typing import Any
+from typing import Any, Callable
 from .err import EDS_ERR_OK, CameraException
 from .sdk import (
     edsdk,
@@ -154,15 +154,16 @@ class EdsPropertyIDEnum(Enum):
     LensBarrelStatus = 0x00000605
 
 
-waiting: dict[EdsPropertyIDEnum, Event] = {}
 results: dict[EdsPropertyIDEnum, Any] = {}
+waiting: dict[EdsPropertyIDEnum, Event] = {p: Event() for p in EdsPropertyIDEnum}
+listeners: dict[EdsPropertyIDEnum, list[Callable]] = {p: [] for p in EdsPropertyIDEnum}
 
 
 def _property_callback(event, property_id: int, param, context):
     """Extract property data from camera when properties change."""
     global waiting, results
-    property_enum = EdsPropertyIDEnum(property_id)
-    print(f"Got property change: {property_enum} (event: {event}, param: {param})")
+    property = EdsPropertyIDEnum(property_id)
+    print(f"Got property change: {property} (event: {event}, param: {param})")
 
     # Extract the camera manager from context
     if context:
@@ -172,18 +173,18 @@ def _property_callback(event, property_id: int, param, context):
                 # Get the actual property data
                 try:
                     data = _extract_property_data(manager.camera, property_id)
-                    results[property_enum] = data
+                    results[property] = data
                     print(f"  Extracted data: {data}")
                 except Exception as e:
                     print(f"  Failed to extract property data: {e}")
         except Exception as e:
             print(f"  Failed to extract manager from context: {e}")
 
-    # Signal waiting threads
-    key = EdsPropertyIDEnum(property_id)
+    if property in waiting:
+        waiting[property].set()
 
-    if key in waiting:
-        waiting[key].set()
+        for listener in listeners[property]:
+            listener(results.get(property))
 
     return EDS_ERR_OK
 

@@ -21,6 +21,8 @@ from .camera_core import (
     _property_callback,
 )
 
+from .camera_core.properties import waiting
+
 
 def needs_sdk(inner):
     def wrapper(self, *args, **kwargs):
@@ -206,14 +208,22 @@ class CameraManager:
     def get_property_value(self, property_id):
         value = EdsUInt32()
         err = edsdk.EdsGetPropertyData(
-            self.camera, property_id, 0, ctypes.sizeof(EdsUInt32), ctypes.byref(value)
+            self.camera,
+            property_id,
+            0,
+            ctypes.sizeof(EdsUInt32),
+            ctypes.byref(value),
         )
+
         if err == EDS_ERR_OK:
             return value.value
+
         return None
 
     @needs_sdk
     def set_property_value(self, property_id: EdsPropertyIDEnum, value):
+        waiting[property_id].clear()
+
         err = edsdk.EdsSetPropertyData(
             self.camera,
             property_id.value,
