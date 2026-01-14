@@ -73,6 +73,10 @@ class ShortcutsHandler:
             # TODO: Download the captured image and add metadata
             # TODO: Save image with cassette context in EXIF metadata
 
+            # Reset slide label and quality rating for next slide
+            self.window.shared_state.set_slide_label("")
+            self.window.shared_state.set_quality_rating(0)
+
         except Exception as e:
             print(f"Failed to capture image: {e}")
             # TODO: Show error dialog to user
