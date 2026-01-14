@@ -157,10 +157,11 @@ class UIComponents:
         cassette_frame.set_child(cassette_box)
 
         # Cassette name
-        cassette_name_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        cassette_name_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         cassette_box.append(cassette_name_box)
 
         cassette_name_label = Gtk.Label(label="Name:")
+        cassette_name_label.set_halign(Gtk.Align.START)
         cassette_name_box.append(cassette_name_label)
 
         self.window.cassette_name_entry = Gtk.Entry()
@@ -171,10 +172,11 @@ class UIComponents:
         cassette_name_box.append(self.window.cassette_name_entry)
 
         # Cassette date
-        cassette_date_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        cassette_date_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         cassette_box.append(cassette_date_box)
 
         cassette_date_label = Gtk.Label(label="Date:")
+        cassette_date_label.set_halign(Gtk.Align.START)
         cassette_date_box.append(cassette_date_label)
 
         self.window.cassette_date_entry = Gtk.Entry()
@@ -193,10 +195,11 @@ class UIComponents:
         cassette_box.append(self.window.cassette_date_status_label)
 
         # Slide date
-        slide_date_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        slide_date_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         cassette_box.append(slide_date_box)
 
         slide_date_label = Gtk.Label(label="Slide Date:")
+        slide_date_label.set_halign(Gtk.Align.START)
         slide_date_box.append(slide_date_label)
 
         self.window.slide_date_entry = Gtk.Entry()
@@ -215,10 +218,11 @@ class UIComponents:
         cassette_box.append(self.window.slide_date_status_label)
 
         # Slide label
-        slide_label_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        slide_label_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         cassette_box.append(slide_label_box)
 
         slide_label_label = Gtk.Label(label="Slide:")
+        slide_label_label.set_halign(Gtk.Align.START)
         slide_label_box.append(slide_label_label)
 
         self.window.slide_label_entry = Gtk.Entry()
@@ -229,10 +233,11 @@ class UIComponents:
         slide_label_box.append(self.window.slide_label_entry)
 
         # Quality rating display
-        quality_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        quality_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         cassette_box.append(quality_box)
 
         quality_display_label = Gtk.Label(label="Quality:")
+        quality_display_label.set_halign(Gtk.Align.START)
         quality_box.append(quality_display_label)
 
         self.window.quality_label = Gtk.Label(label="★★★☆☆")
