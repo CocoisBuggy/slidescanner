@@ -9,13 +9,15 @@ from .camera_core import (
     kEdsCameraCommand_PressShutterButton,
     kEdsCameraCommand_ShutterButton_Completely_NonAF,
     kEdsCameraCommand_ShutterButton_OFF,
-    kEdsObjectEvent_DirItemCreated,
+    kEdsObjectEvent_All,
+    kEdsObjectEvent_DirItemRequestTransfer,
     edsdk,
     EdsCameraListRef,
     EdsUInt32,
     EdsUInt64,
     EdsCameraRef,
     EdsDeviceInfo,
+    EdsDirectoryItemInfo,
     EdsPropertyEventHandler,
     EdsObjectEventHandler,
     EdsEvfImageRef,
@@ -47,8 +49,8 @@ def _object_callback(event, object_ref, context):
     global _global_camera_manager
     print(f"Got object event from camera: {event}, {object_ref}")
 
-    if event == kEdsObjectEvent_DirItemCreated:
-        print("New image created on camera!")
+    if event == kEdsObjectEvent_DirItemRequestTransfer:
+        print("Camera requesting image transfer!")
 
         if _global_camera_manager is not None:
             try:
@@ -210,7 +212,7 @@ class CameraManager:
 
         err = edsdk.EdsSetObjectEventHandler(
             self.camera,
-            kEdsObjectEvent_DirItemCreated,
+            kEdsObjectEvent_All,
             _object_handler,
             ctypes.c_void_p(0),
         )
@@ -317,50 +319,99 @@ class CameraManager:
         """Download an image from the camera."""
         print("Downloading image...")
 
-        # Create file stream for the output
-        import os
+        # Get directory item information
+        dir_item_info = EdsDirectoryItemInfo()
+        err = edsdk.EdsGetDirectoryItemInfo(directory_item, ctypes.byref(dir_item_info))
+        if err != EDS_ERR_OK:
+            raise CameraException(err)
+
+        print(f"Downloading file: {dir_item_info.szFileName.decode('utf-8')}, size: {dir_item_info.size}, format: {dir_item_info.format}")
+
+        # Map format to file extension
+        format_to_extension = {
+            0x00000000: ".jpg",  # kEdsImageType_Unknown
+            0x00000001: ".jpg",  # kEdsImageType_Jpeg
+            0x00000002: ".crw",  # kEdsImageType_CRW
+            0x00000004: ".raw",  # kEdsImageType_RAW
+            0x00000006: ".cr2",  # kEdsImageType_CR2
+            0x00000008: ".heif", # kEdsImageType_HEIF
+            0xB108: ".cr3",      # kEdsObjectFormat_CR3
+        }
+
+        # Get appropriate extension, default to .jpg
+        extension = format_to_extension.get(dir_item_info.format, ".jpg")
+        print(f"Detected format: 0x{dir_item_info.format:08X}, using extension: {extension}")
 
         # Create output directory if it doesn't exist
+        import os
         output_dir = "captured_images"
         os.makedirs(output_dir, exist_ok=True)
 
         # Generate filename using cassette name + sequential number
         global _global_shared_state
         if _global_shared_state:
-            filename = _global_shared_state.get_next_slide_filename()
+            filename = _global_shared_state.get_next_slide_filename(extension)
         else:
             # Fallback if no state available
             import datetime
-
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"image_{timestamp}.jpg"
+            filename = f"image_{timestamp}{extension}"
 
-        filepath = f"{output_dir}/{filename}"
+        filepath = os.path.join(output_dir, filename)
+        print(f"Target filepath: {filepath}")
 
-        # Create file stream
-        stream = EdsStreamRef()
-        err = edsdk.EdsCreateFileStream(
-            filename.encode("utf-8"),
-            1,  # kEdsFileCreateDisposition_CreateAlways
-            0,  # kEdsAccess_ReadWrite
-            ctypes.byref(stream),
-        )
+        # Download to memory stream first, then copy to file
+        print("Creating memory stream for download...")
+        mem_stream = EdsStreamRef()
+        err = edsdk.EdsCreateMemoryStream(EdsUInt64(0), ctypes.byref(mem_stream))
         if err != EDS_ERR_OK:
+            print(f"Failed to create memory stream: {err}")
             raise CameraException(err)
 
         try:
-            # Download the image
-            err = edsdk.EdsDownload(directory_item, stream)
+            print("Downloading to memory stream...")
+            # Download the image to memory
+            err = edsdk.EdsDownload(directory_item, dir_item_info.size, mem_stream)
             if err != EDS_ERR_OK:
+                print(f"EdsDownload to memory failed: {err}")
                 raise CameraException(err)
 
+            print("Download to memory completed, calling EdsDownloadComplete...")
             # Complete the download
             err = edsdk.EdsDownloadComplete(directory_item)
             if err != EDS_ERR_OK:
+                print(f"EdsDownloadComplete failed: {err}")
                 raise CameraException(err)
+
+            # Get the data from memory stream
+            pointer = ctypes.c_void_p()
+            length = EdsUInt64()
+            edsdk.EdsGetPointer(mem_stream, ctypes.byref(pointer))
+            edsdk.EdsGetLength(mem_stream, ctypes.byref(length))
+
+            print(f"Downloaded data size: {length.value} bytes")
+
+            # Extract the data
+            data = ctypes.string_at(pointer, length.value)
+
+            # Write to file manually
+            print(f"Writing {len(data)} bytes to file: {filepath}")
+            with open(filepath, 'wb') as f:
+                f.write(data)
+
+            # Check if file was actually written
+            if os.path.exists(filepath):
+                file_size = os.path.getsize(filepath)
+                print(f"File created: {filepath}, size: {file_size} bytes")
+                if file_size == 0:
+                    print("WARNING: File is still 0 bytes!")
+                else:
+                    print(f"SUCCESS: File has {file_size} bytes")
+            else:
+                print(f"ERROR: File was not created: {filepath}")
 
             print(f"Image downloaded successfully: {filename}")
             return filename
 
         finally:
-            edsdk.EdsRelease(stream)
+            edsdk.EdsRelease(mem_stream)

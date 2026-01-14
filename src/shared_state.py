@@ -100,7 +100,7 @@ class SharedState(GObject.Object):
         self.quality_rating = 3
         self.emit("cassette-context-changed")
 
-    def get_next_slide_filename(self):
+    def get_next_slide_filename(self, extension=".jpg"):
         """Get the next sequential filename for the current cassette."""
         self.slide_counter += 1
         cassette_name = self.cassette_name.strip()
@@ -110,4 +110,4 @@ class SharedState(GObject.Object):
         safe_name = "".join(
             c if c.isalnum() or c in "._-" else "_" for c in cassette_name
         )
-        return f"{safe_name}_{self.slide_counter:03d}.jpg"
+        return f"{safe_name}_{self.slide_counter:03d}{extension}"

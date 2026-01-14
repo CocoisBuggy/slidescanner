@@ -2,6 +2,7 @@ import ctypes
 import os
 
 # Define constants before library loading
+EDS_MAX_NAME = 256
 kEdsPropertyEvent_PropertyChanged = 0x00000101
 kEdsCameraCommand_TakePicture = 0x00000000
 kEdsObjectEvent_DirItemCreated = 0x00000204
@@ -39,6 +40,7 @@ EdsInt32 = ctypes.c_int32
 EdsUInt32 = ctypes.c_uint32
 EdsInt64 = ctypes.c_int64
 EdsUInt64 = ctypes.c_uint64
+EdsChar = ctypes.c_char
 EdsPropertyID = EdsUInt32
 EdsPropertyEvent = EdsUInt32
 EdsDataType = EdsUInt32
@@ -89,6 +91,19 @@ class EdsCapacity(ctypes.Structure):
         ("numberOfFreeClusters", EdsInt32),
         ("bytesPerSector", EdsInt32),
         ("reset", ctypes.c_bool),
+    ]
+
+
+# Define EdsDirectoryItemInfo struct
+class EdsDirectoryItemInfo(ctypes.Structure):
+    _fields_ = [
+        ("size", EdsUInt64),
+        ("isFolder", ctypes.c_bool),
+        ("groupID", EdsUInt32),
+        ("option", EdsUInt32),
+        ("szFileName", EdsChar * EDS_MAX_NAME),
+        ("format", EdsUInt32),
+        ("dateTime", EdsUInt32),
     ]
 
 
@@ -213,7 +228,20 @@ kEdsCameraCommand_ShutterButton_Completely_NonAF = 0x00010003
 kEdsCameraCommand_ShutterButton_OFF = 0x00000000
 
 # Object events
+kEdsObjectEvent_All = 0x00000200
 kEdsObjectEvent_DirItemCreated = 0x00000204
+kEdsObjectEvent_DirItemRequestTransfer = 0x00000208
+
+# Image types
+kEdsImageType_Unknown = 0x00000000
+kEdsImageType_Jpeg = 0x00000001
+kEdsImageType_CRW = 0x00000002
+kEdsImageType_RAW = 0x00000004
+kEdsImageType_CR2 = 0x00000006
+kEdsImageType_HEIF = 0x00000008
+
+# Object formats
+kEdsObjectFormat_CR3 = 0xB108
 
 # Data types
 kEdsDataType_Unknown = 0
@@ -259,7 +287,7 @@ if edsdk is not None:
     edsdk.EdsCreateMemoryStream.restype = EdsError
     edsdk.EdsCreateMemoryStream.argtypes = [EdsUInt64, ctypes.POINTER(EdsStreamRef)]
     edsdk.EdsDownload.restype = EdsError
-    edsdk.EdsDownload.argtypes = [EdsBaseRef, EdsUInt64, EdsStreamRef]
+    edsdk.EdsDownload.argtypes = [EdsDirectoryItemRef, EdsUInt64, EdsStreamRef]
     edsdk.EdsGetPointer.restype = EdsError
     edsdk.EdsGetPointer.argtypes = [EdsStreamRef, ctypes.POINTER(ctypes.c_void_p)]
     edsdk.EdsGetLength.restype = EdsError
@@ -275,5 +303,9 @@ if edsdk is not None:
     edsdk.EdsDownloadComplete.argtypes = [EdsBaseRef]
     edsdk.EdsSetCapacity.restype = EdsError
     edsdk.EdsSetCapacity.argtypes = [EdsCameraRef, EdsCapacity]
+    edsdk.EdsGetDirectoryItemInfo.restype = EdsError
+    edsdk.EdsGetDirectoryItemInfo.argtypes = [EdsDirectoryItemRef, ctypes.POINTER(EdsDirectoryItemInfo)]
+    edsdk.EdsCopyData.restype = EdsError
+    edsdk.EdsCopyData.argtypes = [EdsStreamRef, EdsUInt64, EdsStreamRef]
     edsdk.EdsGetEvent.restype = EdsError
     edsdk.EdsGetEvent.argtypes = [EdsCameraRef, ctypes.POINTER(EdsUInt32)]

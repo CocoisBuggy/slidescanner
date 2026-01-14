@@ -19,6 +19,7 @@ from .sdk import (
     EdsPropertyEvent,
     kEdsPropertyEvent_PropertyChanged,
     EdsDeviceInfo,
+    EdsDirectoryItemInfo,
     EdsPropertyEventHandler,
     EdsObjectEventHandler,
     EdsCameraAddedHandler,
@@ -27,7 +28,9 @@ from .sdk import (
     kEdsCameraCommand_PressShutterButton,
     kEdsCameraCommand_ShutterButton_Completely_NonAF,
     kEdsCameraCommand_ShutterButton_OFF,
+    kEdsObjectEvent_All,
     kEdsObjectEvent_DirItemCreated,
+    kEdsObjectEvent_DirItemRequestTransfer,
 )
 
 
@@ -50,6 +53,7 @@ __all__ = [
     "EdsPropertyEvent",
     "kEdsPropertyEvent_PropertyChanged",
     "EdsDeviceInfo",
+    "EdsDirectoryItemInfo",
     "EdsPropertyEventHandler",
     "EdsObjectEventHandler",
     "EdsCameraAddedHandler",
@@ -58,7 +62,9 @@ __all__ = [
     "kEdsCameraCommand_PressShutterButton",
     "kEdsCameraCommand_ShutterButton_Completely_NonAF",
     "kEdsCameraCommand_ShutterButton_OFF",
+    "kEdsObjectEvent_All",
     "kEdsObjectEvent_DirItemCreated",
+    "kEdsObjectEvent_DirItemRequestTransfer",
     "_property_callback",
     "CameraException",
 ]
