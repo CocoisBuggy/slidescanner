@@ -178,12 +178,19 @@ class UIComponents:
         cassette_date_box.append(cassette_date_label)
 
         self.window.cassette_date_entry = Gtk.Entry()
-        self.window.cassette_date_entry.set_placeholder_text("Year")
-        self.window.cassette_date_entry.set_max_length(4)
+        self.window.cassette_date_entry.set_placeholder_text(
+            "e.g., 2023, Dec 2023, 25/12/2023"
+        )
         self.window.cassette_date_entry.connect(
             "changed", self.window.event_handlers.on_cassette_date_changed
         )
         cassette_date_box.append(self.window.cassette_date_entry)
+
+        # Date status label (for error messages or friendly datetime display)
+        self.window.cassette_date_status_label = Gtk.Label(label="")
+        self.window.cassette_date_status_label.set_margin_top(4)
+        self.window.cassette_date_status_label.set_halign(Gtk.Align.END)
+        cassette_box.append(self.window.cassette_date_status_label)
 
         # Slide label
         slide_label_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)

@@ -39,6 +39,7 @@
           flake8
           mypy
           numpy
+          python-dateutil
         ];
 
         systemDeps = with pkgs; [

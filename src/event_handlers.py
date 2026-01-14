@@ -26,6 +26,8 @@ class EventHandlers:
                 self.window.cassette_date_entry.set_text(
                     self.window.shared_state.cassette_date
                 )
+                # Also update the status label when date changes programmatically
+                self._update_date_status_label(self.window.shared_state.cassette_date)
         if self.window.slide_label_entry:
             # Only update if the text is different to avoid recursion
             current_text = self.window.slide_label_entry.get_text()
@@ -41,13 +43,69 @@ class EventHandlers:
             )
             self.window.quality_label.set_text(stars)
 
+    def _update_date_status_label(self, date_text):
+        """Update the date status label based on the current date text."""
+        from .date_utils import parse_fuzzy_date, format_datetime_friendly
+
+        parsed_date, error_message = parse_fuzzy_date(date_text)
+
+        if parsed_date:
+            # Success - show friendly datetime
+            friendly_text = format_datetime_friendly(parsed_date)
+            self.window.cassette_date_status_label.set_text(friendly_text)
+            self.window.cassette_date_status_label.get_style_context().remove_class(
+                "error-label"
+            )
+        elif error_message:
+            # Error - show error message in red
+            self.window.cassette_date_status_label.set_text(error_message)
+            self.window.cassette_date_status_label.get_style_context().add_class(
+                "error-label"
+            )
+        else:
+            # Empty input - clear status
+            self.window.cassette_date_status_label.set_text("")
+            self.window.cassette_date_status_label.get_style_context().remove_class(
+                "error-label"
+            )
+
     def on_cassette_name_changed(self, entry):
         """Handle cassette name entry changes."""
         self.window.shared_state.set_cassette_name(entry.get_text())
 
     def on_cassette_date_changed(self, entry):
-        """Handle cassette date entry changes."""
-        self.window.shared_state.set_cassette_date(entry.get_text())
+        """Handle cassette date entry changes with fuzzy parsing."""
+        date_text = entry.get_text()
+
+        # Try to parse the fuzzy date
+        from .date_utils import parse_fuzzy_date, format_datetime_friendly
+
+        parsed_date, error_message = parse_fuzzy_date(date_text)
+
+        if parsed_date:
+            # Success - show friendly datetime
+            friendly_text = format_datetime_friendly(parsed_date)
+            self.window.cassette_date_status_label.set_text(friendly_text)
+            self.window.cassette_date_status_label.get_style_context().remove_class(
+                "error-label"
+            )
+            # Store the original text, not the parsed version
+            self.window.shared_state.set_cassette_date(date_text)
+        elif error_message:
+            # Error - show error message in red
+            self.window.cassette_date_status_label.set_text(error_message)
+            self.window.cassette_date_status_label.get_style_context().add_class(
+                "error-label"
+            )
+            # Still store the text so user can continue editing
+            self.window.shared_state.set_cassette_date(date_text)
+        else:
+            # Empty input - clear status
+            self.window.cassette_date_status_label.set_text("")
+            self.window.cassette_date_status_label.get_style_context().remove_class(
+                "error-label"
+            )
+            self.window.shared_state.set_cassette_date(date_text)
 
     def on_slide_label_changed(self, entry):
         """Handle slide label entry changes."""
