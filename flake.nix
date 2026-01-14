@@ -40,9 +40,15 @@
           mypy
           numpy
           python-dateutil
+          pillow
+          piexif
         ];
 
         systemDeps = with pkgs; [
+          exiftool
+          exif
+          geeqie
+
           # GTK4 and dependencies
           gtk4
           gobject-introspection

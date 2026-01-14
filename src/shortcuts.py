@@ -66,15 +66,20 @@ class ShortcutsHandler:
         try:
             from datetime import datetime
 
-            # Parse cassette_date string to datetime, or use None if empty
+            # Parse cassette_date string using fuzzy date parsing
             cassette_date = None
             if self.window.shared_state.cassette_date.strip():
-                try:
-                    cassette_date = datetime.strptime(
-                        self.window.shared_state.cassette_date.strip(), "%Y"
+                from .date_utils import parse_fuzzy_date
+
+                parsed_date, error = parse_fuzzy_date(
+                    self.window.shared_state.cassette_date.strip()
+                )
+                if parsed_date:
+                    cassette_date = parsed_date
+                else:
+                    print(
+                        f"Warning: Could not parse date '{self.window.shared_state.cassette_date}': {error}"
                     )
-                except ValueError:
-                    # If parsing fails, try more formats or use None
                     cassette_date = None
 
             self.window.shared_state.camera_manager.take_picture(

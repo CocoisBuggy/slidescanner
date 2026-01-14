@@ -453,10 +453,44 @@ class CameraManager:
             # Extract the data
             data = ctypes.string_at(pointer, length.value)
 
-            # Write to file manually
-            print(f"Writing {len(data)} bytes to file: {filepath}")
-            with open(filepath, "wb") as f:
-                f.write(data)
+            # For CR3 files, write first then add metadata using exiftool
+            if dir_item_info.format in [0xB108, 0x0000B108]:
+                # Write to file first
+                print(f"Writing {len(data)} bytes to file: {filepath}")
+                with open(filepath, "wb") as f:
+                    f.write(data)
+
+                # Add metadata using exiftool after file is written
+                print("Adding metadata to image...")
+                try:
+                    from .exif_utils import add_metadata_to_image
+
+                    add_metadata_to_image(
+                        data, photo_req, dir_item_info.format, filepath
+                    )
+                    print(f"Metadata added successfully")
+                except Exception as e:
+                    print(f"Warning: Failed to add metadata: {e}")
+
+                data_with_metadata = data
+            else:
+                # For other formats, add metadata then write
+                print("Adding metadata to image...")
+                try:
+                    from .exif_utils import add_metadata_to_image
+
+                    data_with_metadata = add_metadata_to_image(
+                        data, photo_req, dir_item_info.format, filepath
+                    )
+                    print(f"Metadata added successfully")
+                except Exception as e:
+                    print(f"Warning: Failed to add metadata: {e}")
+                    data_with_metadata = data
+
+                # Write to file manually
+                print(f"Writing {len(data_with_metadata)} bytes to file: {filepath}")
+                with open(filepath, "wb") as f:
+                    f.write(data_with_metadata)
 
             # Check if file was actually written
             if os.path.exists(filepath):
