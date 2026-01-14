@@ -212,6 +212,18 @@ results: dict[EdsPropertyIDEnum, Any] = {}
 waiting: dict[EdsPropertyIDEnum, Event] = {p: Event() for p in EdsPropertyIDEnum}
 listeners: dict[EdsPropertyIDEnum, list[Callable]] = {p: [] for p in EdsPropertyIDEnum}
 
+# State event waiting
+state_waiting: dict[int, Event] = {
+    0x00000300: Event(),  # kEdsStateEvent_All
+    0x00000301: Event(),  # kEdsStateEvent_Shutdown
+    0x00000302: Event(),  # kEdsStateEvent_JobStatusChanged
+    0x00000303: Event(),  # kEdsStateEvent_WillSoonShutDown
+    0x00000304: Event(),  # kEdsStateEvent_ShutDownTimerUpdate
+    0x00000305: Event(),  # kEdsStateEvent_CaptureError
+    0x00000306: Event(),  # kEdsStateEvent_InternalError
+    0x00000309: Event(),  # kEdsStateEvent_AfResult
+}
+
 
 def _property_callback(event, property_id: int, param, context):
     """Extract property data from camera when properties change."""
@@ -245,6 +257,17 @@ def _property_callback(event, property_id: int, param, context):
     waiting[property].set()
     for listener in listeners[property]:
         listener(results.get(property))
+
+    return EDS_ERR_OK
+
+
+def _state_callback(event, param, context):
+    """Handle state events (like AF results)."""
+    global state_waiting
+    print(f"Got state event: {hex(event)} (param: {param})")
+
+    if event in state_waiting:
+        state_waiting[event].set()
 
     return EDS_ERR_OK
 

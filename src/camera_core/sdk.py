@@ -150,6 +150,7 @@ EdsPropertyEventHandler = ctypes.CFUNCTYPE(
 EdsObjectEventHandler = ctypes.CFUNCTYPE(
     EdsError, EdsUInt32, EdsBaseRef, ctypes.c_void_p
 )
+EdsStateEventHandler = ctypes.CFUNCTYPE(EdsError, EdsUInt32, EdsUInt32, ctypes.c_void_p)
 EdsCameraAddedHandler = ctypes.CFUNCTYPE(EdsError, ctypes.c_void_p)
 
 # Function prototypes
@@ -217,6 +218,13 @@ if edsdk is not None:
         EdsObjectEventHandler,
         ctypes.c_void_p,
     ]
+    edsdk.EdsSetCameraStateEventHandler.restype = EdsError
+    edsdk.EdsSetCameraStateEventHandler.argtypes = [
+        EdsCameraRef,
+        EdsUInt32,
+        EdsStateEventHandler,
+        ctypes.py_object,
+    ]
 
 # Property event constants
 kEdsPropertyEvent_PropertyChanged = 0x00000101
@@ -233,6 +241,16 @@ kEdsCameraCommand_ShutterButton_Halfway = 0x00000001
 kEdsObjectEvent_All = 0x00000200
 kEdsObjectEvent_DirItemCreated = 0x00000204
 kEdsObjectEvent_DirItemRequestTransfer = 0x00000208
+
+# State events
+kEdsStateEvent_All = 0x00000300
+kEdsStateEvent_Shutdown = 0x00000301
+kEdsStateEvent_JobStatusChanged = 0x00000302
+kEdsStateEvent_WillSoonShutDown = 0x00000303
+kEdsStateEvent_ShutDownTimerUpdate = 0x00000304
+kEdsStateEvent_CaptureError = 0x00000305
+kEdsStateEvent_InternalError = 0x00000306
+kEdsStateEvent_AfResult = 0x00000309
 
 # Image types
 kEdsImageType_Unknown = 0x00000000

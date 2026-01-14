@@ -2,7 +2,7 @@ import ctypes
 import os
 
 from .err import EDS_ERR_OK, ERROR_CODE_NAMES, CameraException
-from .properties import EdsPropertyIDEnum, _property_callback
+from .properties import EdsPropertyIDEnum, _property_callback, _state_callback
 from .sdk import (
     EdsError,
     EdsBaseRef,
@@ -22,6 +22,7 @@ from .sdk import (
     EdsDirectoryItemInfo,
     EdsPropertyEventHandler,
     EdsObjectEventHandler,
+    EdsStateEventHandler,
     EdsCameraAddedHandler,
     edsdk,
     kEdsCameraCommand_TakePicture,
@@ -33,6 +34,14 @@ from .sdk import (
     kEdsObjectEvent_All,
     kEdsObjectEvent_DirItemCreated,
     kEdsObjectEvent_DirItemRequestTransfer,
+    kEdsStateEvent_All,
+    kEdsStateEvent_Shutdown,
+    kEdsStateEvent_JobStatusChanged,
+    kEdsStateEvent_WillSoonShutDown,
+    kEdsStateEvent_ShutDownTimerUpdate,
+    kEdsStateEvent_CaptureError,
+    kEdsStateEvent_InternalError,
+    kEdsStateEvent_AfResult,
 )
 
 
@@ -69,6 +78,16 @@ __all__ = [
     "kEdsObjectEvent_All",
     "kEdsObjectEvent_DirItemCreated",
     "kEdsObjectEvent_DirItemRequestTransfer",
+    "kEdsStateEvent_All",
+    "kEdsStateEvent_Shutdown",
+    "kEdsStateEvent_JobStatusChanged",
+    "kEdsStateEvent_WillSoonShutDown",
+    "kEdsStateEvent_ShutDownTimerUpdate",
+    "kEdsStateEvent_CaptureError",
+    "kEdsStateEvent_InternalError",
+    "kEdsStateEvent_AfResult",
+    "EdsStateEventHandler",
     "_property_callback",
+    "_state_callback",
     "CameraException",
 ]
