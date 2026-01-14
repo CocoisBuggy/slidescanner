@@ -19,7 +19,7 @@ class ShortcutsHandler:
 
         # Define shortcut mappings (key -> function)
         self.shortcuts = {
-            "c": self.capture_image,  # Ctrl+C
+            "space": self.capture_image,  # Ctrl+Space
             "s": self.open_settings,  # Ctrl+S
             "q": self.quit_application,  # Ctrl+Q
             "n": self.next_cassette,  # Ctrl+N
@@ -103,7 +103,7 @@ class ShortcutsHandler:
         """Display a dialog showing all available keyboard shortcuts."""
         # Dynamically generate shortcuts text from the shortcuts dictionary
         ctrl_shortcut_descriptions = {
-            "c": "Capture Image",
+            "space": "Capture Image",
             "s": "Open Settings",
             "q": "Quit Application",
             "n": "Next Cassette",
