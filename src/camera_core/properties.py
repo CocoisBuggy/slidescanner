@@ -175,6 +175,7 @@ def _property_callback(event, property_id: int, param, context):
                     data = _extract_property_data(manager.camera, property_id)
                     results[property] = data
                     print(f"  Extracted data: {data}")
+
                 except Exception as e:
                     print(f"  Failed to extract property data: {e}")
         except Exception as e:

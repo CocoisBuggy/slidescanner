@@ -5,10 +5,13 @@ gi.require_version("Gdk", "4.0")
 
 from gi.repository import Gtk
 
+from .camera_controls import CameraControls
+
 
 class UIComponents:
     def __init__(self, window):
         self.window = window
+        self.camera_controls = CameraControls(window)
 
     def create_header_bar(self):
         header_bar = Gtk.HeaderBar()
@@ -174,31 +177,8 @@ class UIComponents:
         self.window.quality_label = Gtk.Label(label="★★★☆☆")
         quality_box.append(self.window.quality_label)
 
-        controls_frame = Gtk.Frame(label="Controls")
+        controls_frame = self.camera_controls.create_controls_box()
         left_panel.append(controls_frame)
-
-        controls_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        controls_box.set_margin_top(12)
-        controls_box.set_margin_bottom(12)
-        controls_box.set_margin_start(12)
-        controls_box.set_margin_end(12)
-        controls_frame.set_child(controls_box)
-
-        iso_label = Gtk.Label(label="ISO:")
-        controls_box.append(iso_label)
-
-        self.window.iso_spin = Gtk.SpinButton()
-        self.window.iso_spin.set_range(100, 3200)
-        self.window.iso_spin.set_value(400)
-        controls_box.append(self.window.iso_spin)
-
-        shutter_label = Gtk.Label(label="Shutter Speed:")
-        controls_box.append(shutter_label)
-
-        self.window.shutter_spin = Gtk.SpinButton()
-        self.window.shutter_spin.set_range(1, 1000)
-        self.window.shutter_spin.set_value(125)
-        controls_box.append(self.window.shutter_spin)
 
         return left_panel
 
