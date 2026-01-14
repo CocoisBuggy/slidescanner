@@ -34,7 +34,9 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         self.shared_state.connect("camera-name", self.on_camera_name_changed)
         self.on_camera_name_changed(self.shared_state, self.shared_state.camera_name)
 
-        self.shared_state.connect("cassette-context-changed", self.on_cassette_context_changed)
+        self.shared_state.connect(
+            "cassette-context-changed", self.on_cassette_context_changed
+        )
         self.on_cassette_context_changed(self.shared_state)
 
         # Set up keyboard shortcuts
@@ -49,16 +51,24 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
 
         # Define shortcut mappings (key -> function)
         self.shortcuts = {
-            'c': self.capture_image,      # Ctrl+C
-            's': self.open_settings,      # Ctrl+S
-            'q': self.quit_application,   # Ctrl+Q
-            'n': self.next_cassette,      # Ctrl+N
+            "c": self.capture_image,  # Ctrl+C
+            "s": self.open_settings,  # Ctrl+S
+            "q": self.quit_application,  # Ctrl+Q
+            "n": self.next_cassette,  # Ctrl+N
         }
 
         # Numpad shortcuts for quality rating (these will be handled separately)
         self.numpad_shortcuts = {
-            'KP_1': 1, 'KP_2': 2, 'KP_3': 3, 'KP_4': 4, 'KP_5': 5,
-            '1': 1, '2': 2, '3': 3, '4': 4, '5': 5  # Regular number keys as fallback
+            "KP_1": 1,
+            "KP_2": 2,
+            "KP_3": 3,
+            "KP_4": 4,
+            "KP_5": 5,
+            "1": 1,
+            "2": 2,
+            "3": 3,
+            "4": 4,
+            "5": 5,  # Regular number keys as fallback
         }
 
     def on_key_pressed(self, controller, keyval, keycode, state):
@@ -125,10 +135,10 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         """Display a dialog showing all available keyboard shortcuts."""
         # Dynamically generate shortcuts text from the shortcuts dictionary
         ctrl_shortcut_descriptions = {
-            'c': 'Capture Image',
-            's': 'Open Settings',
-            'q': 'Quit Application',
-            'n': 'Next Cassette'
+            "c": "Capture Image",
+            "s": "Open Settings",
+            "q": "Quit Application",
+            "n": "Next Cassette",
         }
 
         shortcuts_lines = ["Available Keyboard Shortcuts:"]
@@ -142,7 +152,9 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         shortcuts_lines.append("• 1-5: Set quality rating (1-5 stars)")
         shortcuts_lines.append("")
         shortcuts_lines.append("File Naming:")
-        shortcuts_lines.append("• Images saved as: CassetteName_001.jpg, CassetteName_002.jpg, etc.")
+        shortcuts_lines.append(
+            "• Images saved as: CassetteName_001.jpg, CassetteName_002.jpg, etc."
+        )
         shortcuts_lines.append("• Use cassette name field to set the base filename")
 
         shortcuts_text = "\n".join(shortcuts_lines)
@@ -153,7 +165,7 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
             message_type=Gtk.MessageType.INFO,
             buttons=Gtk.ButtonsType.OK,
             text="Keyboard Shortcuts",
-            secondary_text=shortcuts_text
+            secondary_text=shortcuts_text,
         )
         dialog.connect("response", lambda dialog, response: dialog.destroy())
         dialog.present()
@@ -408,7 +420,9 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
             self.slide_label_entry.set_text(self.shared_state.slide_label)
         if self.quality_label:
             # Display quality as stars
-            stars = "★" * self.shared_state.quality_rating + "☆" * (5 - self.shared_state.quality_rating)
+            stars = "★" * self.shared_state.quality_rating + "☆" * (
+                5 - self.shared_state.quality_rating
+            )
             self.quality_label.set_text(stars)
 
     def on_cassette_name_changed(self, entry):

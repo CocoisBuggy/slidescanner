@@ -43,6 +43,7 @@ class SharedState(GObject.Object):
         else:
             self.camera_manager.open_session(cam)
             import time
+
             time.sleep(1.0)
             # self.camera_manager.set_property_event_handler()
             time.sleep(0.5)
@@ -87,7 +88,7 @@ class SharedState(GObject.Object):
 
         # If no custom cassette name is set, use a default
         if not self.cassette_name or self.cassette_name.startswith("Cassette "):
-            if not hasattr(self, 'cassette_number'):
+            if not hasattr(self, "cassette_number"):
                 self.cassette_number = 1
             else:
                 self.cassette_number += 1
@@ -106,5 +107,7 @@ class SharedState(GObject.Object):
         if not cassette_name:
             cassette_name = "Unknown"
         # Replace spaces and special characters with underscores
-        safe_name = "".join(c if c.isalnum() or c in "._-" else "_" for c in cassette_name)
+        safe_name = "".join(
+            c if c.isalnum() or c in "._-" else "_" for c in cassette_name
+        )
         return f"{safe_name}_{self.slide_counter:03d}.jpg"

@@ -42,6 +42,7 @@ class SlideScannerApplication(Gtk.Application):
 
         # Set global references for callbacks
         from src.camera import _global_shared_state
+
         _global_shared_state = self.state
 
         def camera_watcher():
@@ -54,6 +55,7 @@ class SlideScannerApplication(Gtk.Application):
                     # We have a camera, process events and chill
                     # Need to call EdsGetEvent regularly to process camera events
                     from src.camera_core import edsdk, EdsUInt32
+
                     if edsdk:
                         event = EdsUInt32()
                         edsdk.EdsGetEvent(self.state.camera, ctypes.byref(event))
