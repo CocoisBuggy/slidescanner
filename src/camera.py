@@ -18,6 +18,7 @@ from .camera_core import (
     EdsEvfImageRef,
     EdsStreamRef,
     EdsPropertyIDEnum,
+    _property_callback,
 )
 
 
@@ -31,29 +32,9 @@ def needs_sdk(inner):
     return wrapper
 
 
-waiting: dict[EdsPropertyIDEnum, Event] = {}
-
 # Global references for callbacks
 _global_camera_manager = None
 _global_shared_state = None
-
-
-# Property change callback
-def _property_callback(event, property_id: int, param, context):
-    global waiting
-    property = EdsPropertyIDEnum(property_id)
-
-    print(f"Got property change: {property} {event}, {property_id}, {param}, {context}")
-
-    # manager = ctypes.cast(context, ctypes.py_object).value
-
-    key = EdsPropertyIDEnum(property_id)
-    if key not in waiting:
-        print(f"No one is waiting on the result from {property_id}")
-        return EDS_ERR_OK
-
-    waiting[key].set()
-    return EDS_ERR_OK
 
 
 # Object event callback (for image capture events)
@@ -247,8 +228,6 @@ class CameraManager:
 
     @needs_sdk
     def start_live_view(self):
-        import time
-
         # Set output device to PC first
         err = self.set_property_value(EdsPropertyIDEnum.Evf_OutputDevice, 2)
         if err is not True:

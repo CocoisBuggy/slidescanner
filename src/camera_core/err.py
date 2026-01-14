@@ -133,3 +133,12 @@ ERROR_CODE_NAMES = {
     0x00008D0E: "EDS_ERR_TAKE_PICTURE_MOVIE_MODE_NG",
     0x00008D0F: "EDS_ERR_TAKE_PICTURE_RETRUCTED_LENS_NG",
 }
+
+
+class CameraException(Exception):
+    def __init__(self, msg: int | str):
+        if isinstance(msg, str):
+            super().__init__(msg)
+        else:
+            name = ERROR_CODE_NAMES.get(msg, f"Unknown error code {msg}")
+            super().__init__(f"EDSDK Error code {msg} - {name}")

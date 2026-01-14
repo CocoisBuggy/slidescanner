@@ -1,5 +1,15 @@
 from enum import Enum
 
+import ctypes
+from threading import Event
+from typing import Any
+from .err import EDS_ERR_OK, CameraException
+from .sdk import (
+    edsdk,
+    EdsUInt32,
+    EdsInt32,
+)
+
 
 # Property IDs
 class EdsPropertyIDEnum(Enum):
@@ -142,3 +152,93 @@ class EdsPropertyIDEnum(Enum):
     DC_Zoom = 0x00000600
     DC_Strobe = 0x00000601
     LensBarrelStatus = 0x00000605
+
+
+waiting: dict[EdsPropertyIDEnum, Event] = {}
+results: dict[EdsPropertyIDEnum, Any] = {}
+
+
+def _property_callback(event, property_id: int, param, context):
+    """Extract property data from camera when properties change."""
+    global waiting, results
+    property_enum = EdsPropertyIDEnum(property_id)
+    print(f"Got property change: {property_enum} (event: {event}, param: {param})")
+
+    # Extract the camera manager from context
+    if context:
+        try:
+            manager = ctypes.cast(context, ctypes.py_object).value
+            if hasattr(manager, "camera") and manager.camera:
+                # Get the actual property data
+                try:
+                    data = _extract_property_data(manager.camera, property_id)
+                    results[property_enum] = data
+                    print(f"  Extracted data: {data}")
+                except Exception as e:
+                    print(f"  Failed to extract property data: {e}")
+        except Exception as e:
+            print(f"  Failed to extract manager from context: {e}")
+
+    # Signal waiting threads
+    key = EdsPropertyIDEnum(property_id)
+
+    if key in waiting:
+        waiting[key].set()
+
+    return EDS_ERR_OK
+
+
+def _allocate_buffers(size, data_type):
+    if data_type.value == 3:  # kEdsDataType_UInt32
+        buffer = EdsUInt32()
+        buffer_size = ctypes.sizeof(EdsUInt32)
+    elif data_type.value == 2:  # kEdsDataType_Int32
+        buffer = EdsInt32()
+        buffer_size = ctypes.sizeof(EdsInt32)
+    elif data_type.value == 6:  # kEdsDataType_String
+        # For strings, use a reasonable buffer size
+        buffer = ctypes.create_string_buffer(256)
+        buffer_size = 256
+    else:
+        # Default to UInt32 for unknown types
+        buffer = EdsUInt32()
+        buffer_size = ctypes.sizeof(EdsUInt32)
+
+    return buffer, buffer_size
+
+
+def _extract_property_data(camera, property_id):
+    """Extract property data from camera for the given property ID."""
+    # First get the property size and data type
+    size = EdsUInt32()
+    data_type = EdsUInt32()
+    err = edsdk.EdsGetPropertySize(
+        camera, property_id, 0, ctypes.byref(size), ctypes.byref(data_type)
+    )
+    if err != EDS_ERR_OK:
+        raise CameraException(f"Failed to get property size: {err}")
+
+    # Allocate buffer based on data type and size
+    buffer, buffer_size = _allocate_buffers(size, data_type)
+
+    # Get the actual property data
+    err = edsdk.EdsGetPropertyData(
+        camera,
+        property_id,
+        0,
+        buffer_size,
+        ctypes.byref(buffer),
+    )
+
+    if err != EDS_ERR_OK:
+        raise CameraException(f"Failed to get property data: {err}")
+
+    # Extract the value based on data type
+    if data_type.value == 3:  # UInt32
+        return buffer.value
+    elif data_type.value == 2:  # Int32
+        return buffer.value
+    elif data_type.value == 6:  # String
+        return buffer.value.decode("utf-8").rstrip("\x00")  # type: ignore
+    else:
+        return buffer.value
