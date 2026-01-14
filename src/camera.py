@@ -1,7 +1,7 @@
 import ctypes
 import os
 import time
-from threading import Event, Lock
+from threading import Event
 
 from .picture import CassetteItem
 from .settings import Settings
@@ -25,6 +25,8 @@ from .camera_core import (
     kEdsCameraCommand_PressShutterButton,
     kEdsCameraCommand_ShutterButton_Completely_NonAF,
     kEdsCameraCommand_ShutterButton_OFF,
+    kEdsCameraCommand_DoEvfAf,
+    kEdsCameraCommand_ShutterButton_Halfway,
     kEdsObjectEvent_All,
     kEdsObjectEvent_DirItemRequestTransfer,
     kEdsPropertyEvent_PropertyChanged,
@@ -323,6 +325,69 @@ class CameraManager:
         return data
 
     @needs_sdk
+    def focus(self):
+        """Perform auto-focus and wait for focus completion."""
+
+        print("Starting auto-focus...")
+
+        # Clear any previous focus state events
+        focus_events = [EdsPropertyIDEnum.FocusInfo, EdsPropertyIDEnum.AfLockState]
+
+        for event in focus_events:
+            if event in waiting:
+                waiting[event].clear()
+
+        # Send focus command (half-press shutter button to trigger AF)
+        err = edsdk.EdsSendCommand(
+            self.camera,
+            kEdsCameraCommand_PressShutterButton,
+            kEdsCameraCommand_ShutterButton_Halfway,
+        )
+
+        if err != EDS_ERR_OK:
+            # Try alternative EVF AF command if half-press fails
+            print("Half-press failed, trying EVF AF command...")
+            err = edsdk.EdsSendCommand(
+                self.camera,
+                kEdsCameraCommand_DoEvfAf,
+                1,  # AF ON
+            )
+
+            if err != EDS_ERR_OK:
+                raise CameraException(f"Failed to start auto-focus: {err}")
+
+        # Wait for focus completion (wait for property changes)
+        focus_completed = False
+        timeout = 5.0  # 5 second timeout
+
+        for event in focus_events:
+            if event in waiting:
+                print(f"Waiting for focus event: {event}")
+                if waiting[event].wait(timeout):
+                    print(f"Focus event received: {event}")
+                    focus_completed = True
+                    break
+                else:
+                    print(f"Timeout waiting for focus event: {event}")
+
+        # Release the shutter button
+        err = edsdk.EdsSendCommand(
+            self.camera,
+            kEdsCameraCommand_PressShutterButton,
+            kEdsCameraCommand_ShutterButton_OFF,
+        )
+
+        if err != EDS_ERR_OK:
+            print(f"Warning: Failed to release shutter button: {err}")
+
+        if focus_completed:
+            print("Auto-focus completed successfully")
+            return True
+        else:
+            print("Auto-focus may not have completed properly")
+            return False
+
+    @needs_sdk
     def take_picture(self, req: CassetteItem):
         """Take a picture using the camera."""
         global _queued_photo_request
@@ -468,7 +533,7 @@ class CameraManager:
                     add_metadata_to_image(
                         data, photo_req, dir_item_info.format, filepath
                     )
-                    print(f"Metadata added successfully")
+                    print("Metadata added successfully")
                 except Exception as e:
                     print(f"Warning: Failed to add metadata: {e}")
 
@@ -482,7 +547,7 @@ class CameraManager:
                     data_with_metadata = add_metadata_to_image(
                         data, photo_req, dir_item_info.format, filepath
                     )
-                    print(f"Metadata added successfully")
+                    print("Metadata added successfully")
                 except Exception as e:
                     print(f"Warning: Failed to add metadata: {e}")
                     data_with_metadata = data

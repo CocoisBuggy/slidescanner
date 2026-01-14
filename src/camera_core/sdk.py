@@ -226,6 +226,8 @@ kEdsCameraCommand_TakePicture = 0x00000000
 kEdsCameraCommand_PressShutterButton = 0x00000004
 kEdsCameraCommand_ShutterButton_Completely_NonAF = 0x00010003
 kEdsCameraCommand_ShutterButton_OFF = 0x00000000
+kEdsCameraCommand_DoEvfAf = 0x00000102
+kEdsCameraCommand_ShutterButton_Halfway = 0x00000001
 
 # Object events
 kEdsObjectEvent_All = 0x00000200

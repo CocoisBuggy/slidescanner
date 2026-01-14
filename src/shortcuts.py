@@ -1,6 +1,7 @@
 import gi
 
 from .picture import CassetteItem
+from threading import Thread
 
 gi.require_version("Gtk", "4.0")
 
@@ -64,8 +65,6 @@ class ShortcutsHandler:
 
         # Take the picture
         try:
-            from datetime import datetime
-
             # Parse slide date first (overrides cassette date)
             slide_date = None
             if self.window.shared_state.slide_date.strip():
@@ -101,14 +100,22 @@ class ShortcutsHandler:
             # Use slide date if available, otherwise cassette date
             final_date = slide_date if slide_date else cassette_date
 
-            self.window.shared_state.camera_manager.take_picture(
-                CassetteItem(
-                    name=self.window.shared_state.cassette_name,
-                    label=self.window.shared_state.slide_label,
-                    stars=self.window.shared_state.quality_rating,
-                    date=final_date,
-                )
-            )
+            def take(item):
+                self.window.shared_state.camera_manager.focus()
+                self.window.shared_state.camera_manager.take_picture(item)
+
+            Thread(
+                target=take,
+                args=(
+                    CassetteItem(
+                        name=self.window.shared_state.cassette_name,
+                        label=self.window.shared_state.slide_label,
+                        stars=self.window.shared_state.quality_rating,
+                        date=final_date,
+                    ),
+                ),
+                daemon=True,
+            ).start()
 
         except Exception as e:
             print(f"Failed to capture image: {e}")
