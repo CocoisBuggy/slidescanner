@@ -54,32 +54,46 @@ class SlideScannerApplication(Gtk.Application):
         def camera_watcher():
             print("Starting camera watcher")
 
-            while self.camera_manager.initialized.is_set() and self.running.is_set():
-                if self.state.camera is not None:
-                    # We have a camera, process events and chill
-                    # Need to call EdsGetEvent regularly to process camera events
-                    from src.camera_core import edsdk, EdsUInt32
+            if not self.camera_manager.initialized.wait(3):
+                print("CAMERA MANAGER DID NOT INITIALIZE")
+            else:
+                print("We are initialized nicely")
+                time.sleep(0.4)
 
-                    if edsdk:
-                        event = EdsUInt32()
-                        edsdk.EdsGetEvent(self.state.camera, ctypes.byref(event))
-                        # Process events - the event callbacks should be triggered
+            try:
+                while (
+                    self.camera_manager.initialized.is_set() and self.running.is_set()
+                ):
                     time.sleep(0.05)
-                    continue
+                    if self.state.camera is not None:
+                        # We have a camera, process events and chill
+                        # Need to call EdsGetEvent regularly to process camera events
+                        from src.camera_core import edsdk, EdsUInt32
 
-                if not self.camera_manager.get_camera_count():
-                    continue
+                        if edsdk:
+                            event = EdsUInt32()
+                            edsdk.EdsGetEvent(self.state.camera, ctypes.byref(event))
+                            # Process events - the event callbacks should be triggered
+                        continue
 
-                print("Camera count > 0")
-                camera = self.camera_manager.get_camera(0)
+                    if not self.camera_manager.get_camera_count():
+                        print("No Cameras Available")
+                        continue
 
-                if not camera:
-                    print("Camera count was positive but we couldn't get the camera")
-                    time.sleep(0.05)
-                    continue
+                    print("Camera count > 0")
+                    camera = self.camera_manager.get_camera(0)
 
-                self.state.set_camera(camera)
-                time.sleep(0.05)
+                    if not camera:
+                        print(
+                            "Camera count was positive but we couldn't get the camera"
+                        )
+                        continue
+
+                    self.state.set_camera(camera)
+            except Exception as e:
+                print(e)
+
+            print("Leaving camera watcher routine")
 
         win = SlideScannerWindow(self.state, application=self)
 

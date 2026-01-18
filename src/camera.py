@@ -373,7 +373,7 @@ class CameraManager:
         # Based on sample code analysis, focus command appears to be synchronous
         # Wait a brief moment for focus to complete, similar to how cameras work
         print("Waiting for focus to complete...")
-        time.sleep(1.0)  # Allow time for AF to complete
+        time.sleep(0.5)  # Allow time for AF to complete
 
         # Release the shutter button to end focus operation
         try:

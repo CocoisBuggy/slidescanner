@@ -175,9 +175,9 @@ class UIComponents:
         cassette_date_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         cassette_box.append(cassette_date_box)
 
-        cassette_date_label = Gtk.Label(label="Date:")
-        cassette_date_label.set_halign(Gtk.Align.START)
-        cassette_date_box.append(cassette_date_label)
+        self.window.cassette_date_label = Gtk.Label(label="Date:")
+        self.window.cassette_date_label.set_halign(Gtk.Align.START)
+        cassette_date_box.append(self.window.cassette_date_label)
 
         self.window.cassette_date_entry = Gtk.Entry()
         self.window.cassette_date_entry.set_placeholder_text(
