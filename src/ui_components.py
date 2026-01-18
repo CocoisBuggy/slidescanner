@@ -267,7 +267,7 @@ class UIComponents:
         self.window.live_view_image = Gtk.Picture()
         self.window.live_view_image.set_vexpand(True)
         self.window.live_view_image.set_hexpand(True)
-        self.window.live_view_image.set_content_fit(Gtk.ContentFit.COVER)
+        self.window.live_view_image.set_content_fit(Gtk.ContentFit.CONTAIN)
         preview_box.append(self.window.live_view_image)
 
         return right_panel
