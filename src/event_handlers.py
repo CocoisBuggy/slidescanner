@@ -151,6 +151,22 @@ class EventHandlers:
         """Handle slide label entry changes."""
         self.window.shared_state.set_slide_label(entry.get_text())
 
+    def on_auto_capture_toggled(self, switch, param_spec):
+        """Handle auto capture toggle changes."""
+        enabled = switch.get_active()
+        self.window.shared_state.set_auto_capture(enabled)
+
+    def on_auto_capture_changed(self, shared_state, enabled):
+        """Handle auto capture state changes from shared state."""
+        # Update UI to reflect state (in case it's changed programmatically)
+        if hasattr(self.window, 'auto_capture_switch'):
+            current_state = self.window.auto_capture_switch.get_active()
+            if current_state != enabled:
+                self.window.auto_capture_switch.set_active(enabled)
+        
+        # Here you could add logic to start/stop auto capture functionality
+        print(f"Auto capture {'enabled' if enabled else 'disabled'}")
+
     def _update_date_override_visuals(self):
         """Update visual indication when slide date overrides cassette date."""
         slide_date_text = self.window.slide_date_entry.get_text().strip()

@@ -51,6 +51,10 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
 
         self.shared_state.connect("picture-taken", self.event_handlers.on_picture_taken)
 
+        self.shared_state.connect(
+            "auto-capture-changed", self.event_handlers.on_auto_capture_changed
+        )
+
         # Set up CSS styling for error labels
         self._setup_css()
 

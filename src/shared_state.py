@@ -1,5 +1,7 @@
 import pathlib
 
+import gi
+gi.require_version("GObject", "2.0")
 from gi.repository import GObject
 
 from src.camera import CameraManager
@@ -20,6 +22,9 @@ class SharedState(GObject.Object):
     slide_label: str = ""
     quality_rating: int = 3  # Default 3-star rating
     slide_counter: int = 0  # Sequential counter for slides within cassette
+    auto_capture: bool = False  # Auto capture toggle state
+    auto_capture: bool = False  # Auto capture toggle state
+    auto_capture: bool = False  # Auto capture toggle state
 
     __gsignals__ = {
         "camera-name": (
@@ -41,6 +46,11 @@ class SharedState(GObject.Object):
             GObject.SignalFlags.RUN_FIRST,
             None,
             (str,),  # filename
+        ),
+        "auto-capture-changed": (
+            GObject.SignalFlags.RUN_FIRST,
+            None,
+            (GObject.TYPE_PYOBJECT,),  # auto_capture: bool
         ),
     }
 
@@ -126,6 +136,11 @@ class SharedState(GObject.Object):
     def notify_picture_taken(self, filename: str):
         """Notify that a picture has been successfully taken."""
         self.emit("picture-taken", filename)
+
+    def set_auto_capture(self, enabled: bool):
+        """Set the auto capture toggle state."""
+        self.auto_capture = enabled
+        self.emit("auto-capture-changed", enabled)
 
     def next_cassette(self):
         """Move to the next cassette (increment cassette number and reset counter)."""

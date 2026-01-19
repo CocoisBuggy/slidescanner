@@ -243,6 +243,37 @@ class UIComponents:
         self.window.quality_label = Gtk.Label(label="★★★☆☆")
         quality_box.append(self.window.quality_label)
 
+        # Auto Capture toggle frame
+        auto_capture_frame = Gtk.Frame(label="Auto Capture")
+        auto_capture_frame.set_margin_bottom(12)
+        left_panel.append(auto_capture_frame)
+
+        auto_capture_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        auto_capture_box.set_margin_top(12)
+        auto_capture_box.set_margin_bottom(12)
+        auto_capture_box.set_margin_start(12)
+        auto_capture_box.set_margin_end(12)
+        auto_capture_frame.set_child(auto_capture_box)
+
+        # Auto Capture switch
+        auto_capture_switch_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        auto_capture_switch_box.set_margin_top(4)
+        auto_capture_switch_box.set_margin_bottom(4)
+        auto_capture_box.append(auto_capture_switch_box)
+
+        auto_capture_label = Gtk.Label(label="Enable Auto Capture:")
+        auto_capture_label.set_halign(Gtk.Align.START)
+        auto_capture_label.set_hexpand(True)
+        auto_capture_switch_box.append(auto_capture_label)
+
+        self.window.auto_capture_switch = Gtk.Switch()
+        self.window.auto_capture_switch.set_valign(Gtk.Align.CENTER)
+        self.window.auto_capture_switch.set_active(self.window.shared_state.auto_capture)
+        self.window.auto_capture_switch.connect(
+            "notify::active", self.window.event_handlers.on_auto_capture_toggled
+        )
+        auto_capture_switch_box.append(self.window.auto_capture_switch)
+
         controls_frame = self.camera_controls.create_controls_box()
         left_panel.append(controls_frame)
 
