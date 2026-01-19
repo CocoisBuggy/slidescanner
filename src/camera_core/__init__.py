@@ -1,7 +1,4 @@
-import ctypes
-import os
-
-from .err import EDS_ERR_OK, ERROR_CODE_NAMES, CameraException
+from .err import EDS_ERR_OK, ErrorCode, CameraException
 from .properties import EdsPropertyIDEnum, _property_callback, _state_callback
 from .sdk import (
     EdsError,
@@ -48,7 +45,7 @@ from .sdk import (
 __all__ = [
     "EdsPropertyIDEnum",
     "EDS_ERR_OK",
-    "ERROR_CODE_NAMES",
+    "ErrorCode",
     "EdsError",
     "EdsBaseRef",
     "EdsCameraListRef",

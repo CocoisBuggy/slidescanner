@@ -1,21 +1,22 @@
-import time
 import ctypes
+import time
 from threading import Event, Thread
+
 import gi
+
 
 gi.require_version("Gtk", "4.0")
 
 from gi.repository import Gio, Gtk  # noqa: E402
 
+from .settings import Settings  # noqa: E402
+from .application_abstract import SlideScannerAbstract  # noqa: E402
 from .camera import CameraManager  # noqa: E402
 from .shared_state import SharedState  # noqa: E402
 from .slide_scanner_window import SlideScannerWindow  # noqa: E402
 
 
-class SlideScannerApplication(Gtk.Application):
-    running: Event
-    state: SharedState
-
+class SlideScannerApplication(SlideScannerAbstract):
     def __init__(self):
         super().__init__(
             application_id="com.example.slidescanner",
@@ -28,9 +29,6 @@ class SlideScannerApplication(Gtk.Application):
         self.camera_manager = CameraManager()
         self.state = SharedState(self.camera_manager)
         self.camera_watcher = None
-
-        # Load settings
-        from .settings import Settings
 
         self.settings = Settings()
         self.state.photo_location = self.settings.photo_location
@@ -68,7 +66,7 @@ class SlideScannerApplication(Gtk.Application):
                     if self.state.camera is not None:
                         # We have a camera, process events and chill
                         # Need to call EdsGetEvent regularly to process camera events
-                        from src.camera_core import edsdk, EdsUInt32
+                        from src.camera_core import EdsUInt32, edsdk
 
                         if edsdk:
                             event = EdsUInt32()

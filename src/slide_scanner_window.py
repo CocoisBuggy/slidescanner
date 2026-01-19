@@ -1,19 +1,22 @@
 import gi
 
+from .event_handlers import EventHandlers
+from .live_view import LiveView
+from .shortcuts import ShortcutsHandler
+from .ui_components import UIComponents
+from .shared_state import SharedState
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 
-from gi.repository import Gtk, Gdk  # noqa: E402
 
-from .shortcuts import ShortcutsHandler
-from .ui_components import UIComponents
-from .event_handlers import EventHandlers
-from .live_view import LiveView
+from gi.repository import Gdk, Gtk  # noqa: E402
 
 
 class SlideScannerWindow(Gtk.ApplicationWindow):
-    def __init__(self, shared_state, **kwargs):
+    def __init__(self, shared_state: SharedState, **kwargs):
         super().__init__(**kwargs)
+
         self.shared_state = shared_state
         self.set_title("Slide Scanner")
         self.set_default_size(800, 600)

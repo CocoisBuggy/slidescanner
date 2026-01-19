@@ -1,29 +1,30 @@
 import threading
 import time
-import gi
 
-gi.require_version("Gtk", "4.0")
-gi.require_version("Gdk", "4.0")
+from gi.repository import GdkPixbuf, GLib
 
-from gi.repository import GLib, GdkPixbuf
+from .application_abstract import SlideWindowAbstract
+from .camera_core.err import CameraException, ErrorCode
 
 
 class LiveView:
-    def __init__(self, window):
+    def __init__(self, window: SlideWindowAbstract):
         self.window = window
 
     def start_live_view(self):
         if self.window.live_view_thread and self.window.live_view_thread.is_alive():
             return
+
         self.window.live_view_running = True
         self.window.live_view_thread = threading.Thread(
-            target=self.live_view_loop, daemon=True
+            target=self.live_view_loop,
+            daemon=True,
         )
         self.window.live_view_thread.start()
 
     def stop_live_view(self):
         self.window.live_view_running = False
-        if self.window.live_view_thread:
+        if self.window.live_view_thread is not None:
             self.window.live_view_thread.join(timeout=1)
             self.window.live_view_thread = None
 
@@ -32,6 +33,10 @@ class LiveView:
             try:
                 data = self.window.shared_state.camera_manager.download_evf_image()
                 GLib.idle_add(self.update_live_view_image, data)
+            except CameraException as e:
+                if e.err_code == ErrorCode.InvalidHandle:
+                    self.stop_live_view()
+
             except Exception as e:
                 print(f"Live view error: {e}")
                 time.sleep(1)
