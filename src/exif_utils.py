@@ -77,7 +77,7 @@ def _update_cr3_metadata(
     image_data: bytes, cassette_item: CassetteItem, filepath: str | None = None
 ) -> None:
     """Update CR3 metadata using exiftool subprocess."""
-    print(f"Updating CR3 metadata using exiftool")
+    print("Updating CR3 metadata using exiftool")
 
     if not filepath:
         print("No filepath provided for CR3 metadata update")
@@ -97,7 +97,7 @@ def _update_cr3_metadata(
     )
     description = cassette_item.label or ""
     rating = cassette_item.stars or 0
-    copyright = f"Cassette: {cassette_item.name}" if cassette_item.name else ""
+    cassette = f"Cassette: {cassette_item.name}" if cassette_item.name else ""
 
     # Build exiftool command
     cmd = [
@@ -109,7 +109,7 @@ def _update_cr3_metadata(
         f"-Description={description}",
         f"-ImageDescription={description}",
         f"-Rating={rating}",
-        f"-Copyright={copyright}",
+        f"-Copyright={cassette}",
         "-XPSubject=Slide Scanner",
         filepath,
     ]
@@ -162,12 +162,12 @@ def _create_xmp_sidecar(
             xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/">
             <dc:title>
                 <rdf:Alt>
-                    <rdf:li xml:lang="x-default">{cassette_item.label or ''}</rdf:li>
+                    <rdf:li xml:lang="x-default">{cassette_item.label or ""}</rdf:li>
                 </rdf:Alt>
             </dc:title>
             <dc:description>
                 <rdf:Alt>
-                    <rdf:li xml:lang="x-default">Cassette: {cassette_item.name or ''}</rdf:li>
+                    <rdf:li xml:lang="x-default">Cassette: {cassette_item.name or ""}</rdf:li>
                 </rdf:Alt>
             </dc:description>
             <dc:date>
@@ -177,7 +177,7 @@ def _create_xmp_sidecar(
             </dc:date>
             <xmp:Rating>{cassette_item.stars or 0}</xmp:Rating>
             <photoshop:Category>Slide Scanner</photoshop:Category>
-            <photoshop:Credit>{cassette_item.name or ''}</photoshop:Credit>
+            <photoshop:Credit>{cassette_item.name or ""}</photoshop:Credit>
         </rdf:Description>
     </rdf:RDF>
 </x:xmpmeta>
@@ -274,15 +274,15 @@ def _add_embedded_metadata(
 
             if cassette_item.label:
                 if hasattr(piexif.ImageIFD, "ImageDescription"):
-                    exif_dict["0th"][
-                        piexif.ImageIFD.ImageDescription
-                    ] = cassette_item.label
+                    exif_dict["0th"][piexif.ImageIFD.ImageDescription] = (
+                        cassette_item.label
+                    )
 
             if cassette_item.name:
                 if hasattr(piexif.ImageIFD, "Copyright"):
-                    exif_dict["0th"][
-                        piexif.ImageIFD.Copyright
-                    ] = f"Cassette: {cassette_item.name}"
+                    exif_dict["0th"][piexif.ImageIFD.Copyright] = (
+                        f"Cassette: {cassette_item.name}"
+                    )
 
             if cassette_item.stars and 1 <= cassette_item.stars <= 5:
                 if hasattr(piexif.ExifIFD, "Rating"):

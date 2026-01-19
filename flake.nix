@@ -48,6 +48,7 @@
           exiftool
           exif
           geeqie
+          usbutils
 
           # GTK4 and dependencies
           gtk4
