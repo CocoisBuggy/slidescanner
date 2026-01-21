@@ -5,6 +5,9 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk
 
 from .camera_controls import CameraControls
+from .graphs import GraphManager
+
+INNER_PADDING = 12
 
 
 class UIComponents:
@@ -76,11 +79,11 @@ class UIComponents:
 
     def create_toolbar(self):
         toolbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        toolbar.set_margin_top(6)
-        toolbar.set_margin_bottom(6)
-        toolbar.set_margin_start(12)
-        toolbar.set_margin_end(12)
-        toolbar.set_spacing(6)
+        toolbar.set_margin_start(INNER_PADDING)
+        toolbar.set_margin_end(INNER_PADDING)
+        toolbar.set_margin_top(INNER_PADDING // 2)
+        toolbar.set_margin_bottom(INNER_PADDING // 2)
+        toolbar.set_spacing(INNER_PADDING // 2)
 
         capture_btn = Gtk.Button(label="Capture")
         capture_btn.connect("clicked", self.on_capture_clicked)
@@ -127,33 +130,41 @@ class UIComponents:
         return content_area
 
     def create_left_panel(self):
+        # Create a scrolled window for the left panel
+        scrolled_window = Gtk.ScrolledWindow()
+        scrolled_window.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scrolled_window.set_size_request(200, -1)
+        scrolled_window.set_margin_start(INNER_PADDING)
+        scrolled_window.set_margin_top(INNER_PADDING)
+        scrolled_window.set_margin_bottom(INNER_PADDING)
+        scrolled_window.set_margin_end(4)
+
+        # Create the actual content box inside the scrolled window
         left_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        left_panel.set_size_request(200, -1)
-        left_panel.set_margin_start(12)
-        left_panel.set_margin_end(6)
-        left_panel.set_margin_top(12)
-        left_panel.set_margin_bottom(12)
+        left_panel.set_vexpand(True)
+        left_panel.set_margin_end(4)
+        scrolled_window.set_child(left_panel)
 
         camera_info_frame = Gtk.Frame(label="Camera Info")
-        camera_info_frame.set_margin_bottom(12)
+        camera_info_frame.set_margin_bottom(INNER_PADDING)
         left_panel.append(camera_info_frame)
 
         self.window.camera_info_label = Gtk.Label(label="No camera connected")
-        self.window.camera_info_label.set_margin_top(12)
-        self.window.camera_info_label.set_margin_bottom(12)
-        self.window.camera_info_label.set_margin_start(12)
-        self.window.camera_info_label.set_margin_end(12)
+        self.window.camera_info_label.set_margin_top(INNER_PADDING)
+        self.window.camera_info_label.set_margin_bottom(INNER_PADDING)
+        self.window.camera_info_label.set_margin_start(INNER_PADDING)
+        self.window.camera_info_label.set_margin_end(INNER_PADDING)
         camera_info_frame.set_child(self.window.camera_info_label)
 
         cassette_frame = Gtk.Frame(label="Cassette Context")
-        cassette_frame.set_margin_bottom(12)
+        cassette_frame.set_margin_bottom(INNER_PADDING)
         left_panel.append(cassette_frame)
 
         cassette_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        cassette_box.set_margin_top(12)
-        cassette_box.set_margin_bottom(12)
-        cassette_box.set_margin_start(12)
-        cassette_box.set_margin_end(12)
+        cassette_box.set_margin_top(INNER_PADDING)
+        cassette_box.set_margin_bottom(INNER_PADDING)
+        cassette_box.set_margin_start(INNER_PADDING)
+        cassette_box.set_margin_end(INNER_PADDING)
         cassette_frame.set_child(cassette_box)
 
         # Cassette name
@@ -245,20 +256,23 @@ class UIComponents:
 
         # Auto Capture toggle frame
         auto_capture_frame = Gtk.Frame(label="Auto Capture")
-        auto_capture_frame.set_margin_bottom(12)
+        auto_capture_frame.set_margin_bottom(INNER_PADDING)
         left_panel.append(auto_capture_frame)
 
         auto_capture_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        auto_capture_box.set_margin_top(12)
-        auto_capture_box.set_margin_bottom(12)
-        auto_capture_box.set_margin_start(12)
-        auto_capture_box.set_margin_end(12)
+        auto_capture_box.set_margin_top(INNER_PADDING)
+        auto_capture_box.set_margin_bottom(INNER_PADDING)
+        auto_capture_box.set_margin_start(INNER_PADDING)
+        auto_capture_box.set_margin_end(INNER_PADDING)
         auto_capture_frame.set_child(auto_capture_box)
 
         # Auto Capture switch
-        auto_capture_switch_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        auto_capture_switch_box.set_margin_top(4)
-        auto_capture_switch_box.set_margin_bottom(4)
+        auto_capture_switch_box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=8,
+        )
+        auto_capture_switch_box.set_margin_top(INNER_PADDING // 2)
+        auto_capture_switch_box.set_margin_bottom(INNER_PADDING // 2)
         auto_capture_box.append(auto_capture_switch_box)
 
         auto_capture_label = Gtk.Label(label="Enable Auto Capture:")
@@ -268,7 +282,9 @@ class UIComponents:
 
         self.window.auto_capture_switch = Gtk.Switch()
         self.window.auto_capture_switch.set_valign(Gtk.Align.CENTER)
-        self.window.auto_capture_switch.set_active(self.window.shared_state.auto_capture)
+        self.window.auto_capture_switch.set_active(
+            self.window.shared_state.auto_capture
+        )
         self.window.auto_capture_switch.connect(
             "notify::active", self.window.event_handlers.on_auto_capture_toggled
         )
@@ -276,16 +292,18 @@ class UIComponents:
 
         # Auto capture status label
         self.window.auto_capture_status_label = Gtk.Label(label="")
-        self.window.auto_capture_status_label.set_margin_top(4)
+        self.window.auto_capture_status_label.set_margin_top(INNER_PADDING // 4)
         self.window.auto_capture_status_label.set_halign(Gtk.Align.CENTER)
         self.window.auto_capture_status_label.get_style_context().add_class("caption")
         auto_capture_box.append(self.window.auto_capture_status_label)
 
         # Stability graph
-        from .graphs import GraphManager
+
         self.window.graph_manager = GraphManager()
         self.window.stability_graph = self.window.graph_manager.create_stability_graph(
-            "stability", width=380, height=140
+            "stability",
+            width=380,
+            height=140,
         )
         self.window.stability_graph.set_margin_top(8)
         self.window.stability_graph.set_margin_bottom(4)
@@ -294,16 +312,16 @@ class UIComponents:
         controls_frame = self.camera_controls.create_controls_box()
         left_panel.append(controls_frame)
 
-        return left_panel
+        return scrolled_window
 
     def create_right_panel(self):
         right_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         right_panel.set_hexpand(True)
         right_panel.set_vexpand(True)
-        right_panel.set_margin_start(6)
-        right_panel.set_margin_end(12)
-        right_panel.set_margin_top(12)
-        right_panel.set_margin_bottom(12)
+        right_panel.set_margin_start(INNER_PADDING // 2)
+        right_panel.set_margin_end(INNER_PADDING)
+        right_panel.set_margin_top(INNER_PADDING)
+        right_panel.set_margin_bottom(INNER_PADDING)
 
         preview_frame = Gtk.Frame()
         preview_frame.set_hexpand(True)
@@ -322,10 +340,10 @@ class UIComponents:
 
     def create_status_bar(self):
         status_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        status_bar.set_margin_top(6)
-        status_bar.set_margin_bottom(6)
-        status_bar.set_margin_start(12)
-        status_bar.set_margin_end(12)
+        status_bar.set_margin_top(INNER_PADDING // 2)
+        status_bar.set_margin_bottom(INNER_PADDING // 2)
+        status_bar.set_margin_start(INNER_PADDING)
+        status_bar.set_margin_end(INNER_PADDING)
 
         status_label = Gtk.Label(label="Ready")
         status_bar.append(status_label)

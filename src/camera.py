@@ -3,7 +3,7 @@ import os
 import time
 from threading import Event
 
-from .picture import CassetteItem
+from .picture import PENDING_CASSETTE, CassetteItem
 from .settings import Settings
 
 from .camera_core import (
@@ -395,7 +395,10 @@ class CameraManager:
         global queued_photo_request
         print("Taking picture...")
 
-        if queued_photo_request is not None:
+        if (
+            queued_photo_request is not None
+            and queued_photo_request != PENDING_CASSETTE
+        ):
             raise Exception("We are still waiting for the last photo to resolve")
 
         queued_photo_request = req

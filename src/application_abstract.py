@@ -1,6 +1,6 @@
 from threading import Event, Thread
 
-from gi.repository import Gtk  # noqa: E402
+from gi.repository import Gtk
 
 from .camera import CameraManager  # noqa: E402
 from .settings import Settings

@@ -1,5 +1,9 @@
+from .application_abstract import SlideWindowAbstract
+from .auto_capture import AutoCaptureManager
+
+
 class EventHandlers:
-    def __init__(self, window):
+    def __init__(self, window: SlideWindowAbstract):
         self.window = window
 
     def on_camera_name_changed(self, shared_state, camera_name):
@@ -159,20 +163,22 @@ class EventHandlers:
     def on_auto_capture_changed(self, shared_state, enabled):
         """Handle auto capture state changes from shared state."""
         # Update UI to reflect state (in case it's changed programmatically)
-        if hasattr(self.window, 'auto_capture_switch'):
+        if hasattr(self.window, "auto_capture_switch"):
             current_state = self.window.auto_capture_switch.get_active()
             if current_state != enabled:
                 self.window.auto_capture_switch.set_active(enabled)
-        
+
         # Notify live view system of state change
         if enabled:
-            self.window.live_view.on_auto_capture_enabled()
+            self.window.live_view.auto_capture_manager = AutoCaptureManager(self.window)
             self._update_auto_capture_status("Waiting for image...")
         else:
-            self.window.live_view.on_auto_capture_disabled()
+            self.window.live_view.auto_capture_manager = None
             self._update_auto_capture_status("")
-        
-        print(f"Auto capture {'enabled' if enabled else 'disabled'}")
+
+        print(
+            f"Auto capture {'enabled' if enabled else 'disabled'} {self.window.live_view.auto_capture_manager}"
+        )
 
     def _update_date_override_visuals(self):
         """Update visual indication when slide date overrides cassette date."""
@@ -209,12 +215,14 @@ class EventHandlers:
 
     def _update_auto_capture_status(self, status_text: str):
         """Update the auto capture status label."""
-        if hasattr(self.window, 'auto_capture_status_label'):
+        if hasattr(self.window, "auto_capture_status_label"):
             self.window.auto_capture_status_label.set_text(status_text)
 
     def update_auto_capture_status_from_manager(self):
         """Update status from auto capture manager (call this periodically)."""
-        if self.window.shared_state.auto_capture and hasattr(self.window, 'auto_capture_status_label'):
+        if self.window.shared_state.auto_capture and hasattr(
+            self.window, "auto_capture_status_label"
+        ):
             status = self.window.live_view.auto_capture_manager.get_status_text()
             self._update_auto_capture_status(status)
 

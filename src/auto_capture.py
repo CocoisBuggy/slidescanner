@@ -1,3 +1,4 @@
+import contextlib
 import time
 from enum import Enum
 from threading import Lock
@@ -18,11 +19,20 @@ class AutoCaptureState(Enum):
 class AutoCaptureManager:
     """Manages auto-capture functionality with image stability detection."""
 
+    stability_threshold: float
+    stability_duration: int
+    prior_frames: list = []
+    state: AutoCaptureState
+    total_frames_processed = 0
+    stability_history = []
+    last_captured_image: bytes | None = None
+    last_capture_time: float = 0
+    stability_duration: int = 12
+
     def __init__(
         self,
         window,
-        stability_threshold: float = 0.98,
-        stability_duration: float = 0.2,
+        stability_threshold: float = 0.95,
     ):
         """
         Initialize auto-capture manager.
@@ -34,23 +44,17 @@ class AutoCaptureManager:
         """
         self.window = window
         self.stability_threshold = stability_threshold
-        self.stability_duration = stability_duration
 
-        # State management
-        self.state = AutoCaptureState.WAITING_FOR_NEW_IMAGE
-        self.state_lock = Lock()
+    @contextlib.contextmanager
+    def frame_context(self, frame_data: bytes):
+        yield  # Do something with the frame
 
-        # Image tracking
-        self.last_image_data: Optional[bytes] = None
-        self.current_image_data: Optional[bytes] = None
-        self.stable_start_time: Optional[float] = None
+        # Capture the frame stuff
+        self.prior_frames.append(frame_data)
+        self.total_frames_processed += 1
 
-        # Statistics
-        self.total_frames_processed = 0
-        self.captures_taken = 0
-        
-        # Stability tracking for graph
-        self.stability_history = []
+        if len(self.prior_frames) > self.stability_duration:
+            self.prior_frames.pop(0)
 
     def process_frame(self, frame_data: bytes) -> bool:
         """
@@ -62,79 +66,28 @@ class AutoCaptureManager:
         Returns:
             True if a capture should be triggered, False otherwise
         """
-        with self.state_lock:
-            self.total_frames_processed += 1
 
-            # Check if this is a new image (different from last stable image)
-            is_new_image = self._is_new_image(frame_data)
+        with self.frame_context(frame_data):
+            if not self._is_image_stable(frame_data):
+                # The image is not stable
+                return False
 
-            should_capture = False
+            if (
+                self.last_captured_image is not None
+                and self._calculate_frame_similarity(
+                    frame_data, self.last_captured_image
+                )
+                >= self.stability_threshold
+            ):
+                # The image is stable but we have a stable capture of it in any event
+                return False
 
-            if self.state == AutoCaptureState.WAITING_FOR_NEW_IMAGE:
-                if is_new_image:
-                    # New image detected, start monitoring stability
-                    self.current_image_data = frame_data
-                    self.stable_start_time = time.time()
-                    self.state = AutoCaptureState.MONITORING_STABILITY
-                    print("Auto-capture: New image detected, monitoring stability...")
+            if len(self.prior_frames) < self.stability_duration:
+                return False
 
-            elif self.state == AutoCaptureState.MONITORING_STABILITY:
-                if self._is_image_stable(frame_data):
-                    # Image is still stable
-                    stability_time = (
-                        time.time() - self.stable_start_time
-                        if self.stable_start_time
-                        else 0.0
-                    )
-                    if stability_time >= self.stability_duration:
-                        # Image has been stable long enough
-                        self.state = AutoCaptureState.STABLE
-                        should_capture = True
-                        print(
-                            f"Auto-capture: Image stable for {stability_time:.2f}s, triggering capture..."
-                        )
-                else:
-                    # Image changed, reset to waiting state
-                    self.current_image_data = frame_data
-                    self.stable_start_time = time.time()
-                    print("Auto-capture: Image changed, resetting stability timer...")
-
-            elif self.state == AutoCaptureState.STABLE:
-                if self._is_image_stable(frame_data):
-                    # Still stable, but we already captured, wait for new image
-                    pass  # Do nothing, continue in stable state
-                else:
-                    # New image appeared, reset to waiting
-                    self.current_image_data = frame_data
-                    self.stable_start_time = time.time()
-                    self.state = AutoCaptureState.MONITORING_STABILITY
-                    print("Auto-capture: New image appeared, monitoring stability...")
-
-            elif self.state == AutoCaptureState.CAPTURING:
-                # After capture, reset to waiting for new image
-                self.last_image_data = frame_data
-                self.current_image_data = None
-                self.stable_start_time = None
-                self.state = AutoCaptureState.WAITING_FOR_NEW_IMAGE
-                print("Auto-capture: Capture complete, waiting for new image...")
-
-            return should_capture
-
-    def reset(self):
-        """Reset the auto-capture state machine."""
-        with self.state_lock:
-            self.state = AutoCaptureState.WAITING_FOR_NEW_IMAGE
-            self.last_image_data = None
-            self.current_image_data = None
-            self.stable_start_time = None
-            self.stability_history.clear()
-            print("Auto-capture: State machine reset")
-
-    def on_capture_completed(self):
-        """Called when a capture has been completed."""
-        with self.state_lock:
-            self.captures_taken += 1
-            self.state = AutoCaptureState.CAPTURING
+            # The image is both sufficiently dissimilar to the last capture, and we also
+            # are presently stable
+            return True
 
     def _calculate_frame_similarity(
         self, frame_data1: bytes, frame_data2: bytes
@@ -156,24 +109,29 @@ class AutoCaptureManager:
             return 0.0
 
         # Apply Hanning window to reduce edge importance
-        hanning_window = np.hanning(img1.shape[0])[:, np.newaxis] * np.hanning(img1.shape[1])[np.newaxis, :]
+        hanning_window = (
+            np.hanning(img1.shape[0])[:, np.newaxis]
+            * np.hanning(img1.shape[1])[np.newaxis, :]
+        )
         img1_windowed = img1 * hanning_window
         img2_windowed = img2 * hanning_window
 
         # Use normalized cross-correlation for similarity
-        correlation = np.corrcoef(img1_windowed.flatten(), img2_windowed.flatten())[0, 1]
+        correlation = np.corrcoef(img1_windowed.flatten(), img2_windowed.flatten())[
+            0, 1
+        ]
 
         # Handle NaN case when images are constant
         if np.isnan(correlation):
             correlation = 1.0 if np.array_equal(img1, img2) else 0.0
 
         similarity = max(0.0, correlation)  # Ensure non-negative
-        
+
         # Store stability for graph (keep only recent history)
         self.stability_history.append(similarity)
         if len(self.stability_history) > 100:
             self.stability_history.pop(0)
-        
+
         return similarity
 
     def _frame_data_to_array(self, frame_data: bytes) -> np.ndarray:
@@ -184,36 +142,27 @@ class AutoCaptureManager:
             return np.array([])
         return cv2.resize(frame, (64, 64))  # Resize for faster processing
 
-    def _is_new_image(self, frame_data: bytes) -> bool:
-        """Check if the current image is different from the last stable image using correlation."""
-        if self.last_image_data is None:
-            return True
-        similarity = self._calculate_frame_similarity(frame_data, self.last_image_data)
-        return similarity < self.stability_threshold
-
     def _is_image_stable(self, frame_data: bytes) -> bool:
         """Check if the current image is stable using correlation with the monitoring image."""
-        if self.current_image_data is None:
+        if not self.prior_frames:
             return False
-        similarity = self._calculate_frame_similarity(
-            frame_data, self.current_image_data
+
+        previous_similarities = [
+            self._calculate_frame_similarity(frame_data, prior)
+            for prior in self.prior_frames
+        ]
+
+        similarity = np.average(previous_similarities)
+        self.stability_history = (
+            list(
+                [
+                    0
+                    for _ in range(
+                        int(self.stability_duration) - len(previous_similarities)
+                    )
+                ]
+            )
+            + previous_similarities
         )
-        return similarity >= self.stability_threshold
 
-    def get_status_text(self) -> str:
-        """Get current status text for debugging/UI feedback."""
-        with self.state_lock:
-            status_parts = [
-                f"State: {self.state.value}",
-                f"Frames: {self.total_frames_processed}",
-                f"Captures: {self.captures_taken}",
-            ]
-
-            if (
-                self.state == AutoCaptureState.MONITORING_STABILITY
-                and self.stable_start_time
-            ):
-                stability_time = time.time() - self.stable_start_time
-                status_parts.append(f"Stability: {stability_time:.2f}s")
-
-            return " | ".join(status_parts)
+        return bool(similarity >= self.stability_threshold)
