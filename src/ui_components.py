@@ -274,6 +274,13 @@ class UIComponents:
         )
         auto_capture_switch_box.append(self.window.auto_capture_switch)
 
+        # Auto capture status label
+        self.window.auto_capture_status_label = Gtk.Label(label="")
+        self.window.auto_capture_status_label.set_margin_top(4)
+        self.window.auto_capture_status_label.set_halign(Gtk.Align.CENTER)
+        self.window.auto_capture_status_label.get_style_context().add_class("caption")
+        auto_capture_box.append(self.window.auto_capture_status_label)
+
         controls_frame = self.camera_controls.create_controls_box()
         left_panel.append(controls_frame)
 

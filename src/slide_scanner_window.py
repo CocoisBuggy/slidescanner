@@ -74,6 +74,12 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
             opacity: 0.5;
             color: #888888;
         }
+        
+        .caption {
+            font-size: 0.8em;
+            color: #666666;
+            font-style: italic;
+        }
         """
         css_provider.load_from_data(css_data.encode())
 

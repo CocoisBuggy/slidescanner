@@ -4,12 +4,14 @@ import time
 from gi.repository import GdkPixbuf, GLib
 
 from .application_abstract import SlideWindowAbstract
+from .auto_capture import AutoCaptureManager
 from .camera_core.err import CameraException, ErrorCode
 
 
 class LiveView:
     def __init__(self, window: SlideWindowAbstract):
         self.window = window
+        self.auto_capture_manager = AutoCaptureManager(window)
 
     def start_live_view(self):
         if self.window.live_view_thread and self.window.live_view_thread.is_alive():
@@ -32,6 +34,13 @@ class LiveView:
         while self.window.live_view_running and self.window.shared_state.camera:
             try:
                 data = self.window.shared_state.camera_manager.download_evf_image()
+                
+                # Process for auto-capture if enabled
+                if self.window.shared_state.auto_capture:
+                    should_capture = self.auto_capture_manager.process_frame(data)
+                    if should_capture:
+                        self._trigger_auto_capture()
+                
                 GLib.idle_add(self.update_live_view_image, data)
             except CameraException as e:
                 if e.err_code == ErrorCode.InvalidHandle:
@@ -41,6 +50,12 @@ class LiveView:
                 print(f"Live view error: {e}")
                 time.sleep(1)
             time.sleep(0.1)
+
+    def _trigger_auto_capture(self):
+        """Trigger an automatic capture using the same logic as manual capture."""
+        print("Auto-capture: Triggering automatic photo capture")
+        self.window.shortcuts_handler.capture_image()
+        self.auto_capture_manager.on_capture_completed()
 
     def update_live_view_image(self, data):
         try:
@@ -54,3 +69,30 @@ class LiveView:
                 print("Pixbuf is None")
         except Exception as e:
             print(f"Failed to load image: {e}")
+
+    def on_auto_capture_enabled(self):
+        """Called when auto-capture is enabled."""
+        self.auto_capture_manager.reset()
+        # Start status update timer
+        if hasattr(self.window, 'event_handlers'):
+            self._start_status_update_timer()
+        print("Auto-capture: Enabled and ready")
+
+    def on_auto_capture_disabled(self):
+        """Called when auto-capture is disabled."""
+        self.auto_capture_manager.reset()
+        # Stop status update timer
+        if hasattr(self, '_status_update_timer_id'):
+            GLib.source_remove(self._status_update_timer_id)
+            self._status_update_timer_id = None
+        print("Auto-capture: Disabled")
+
+    def _start_status_update_timer(self):
+        """Start a timer to periodically update auto-capture status."""
+        def update_status():
+            if self.window.shared_state.auto_capture:
+                self.window.event_handlers.update_auto_capture_status_from_manager()
+                return True  # Continue timer
+            return False  # Stop timer
+        
+        self._status_update_timer_id = GLib.timeout_add(100, update_status)  # Update every 100ms

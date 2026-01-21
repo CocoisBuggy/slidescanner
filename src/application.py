@@ -19,7 +19,7 @@ from .slide_scanner_window import SlideScannerWindow  # noqa: E402
 class SlideScannerApplication(SlideScannerAbstract):
     def __init__(self):
         super().__init__(
-            application_id="com.example.slidescanner",
+            application_id="com.coco.slidescanner",
             flags=Gio.ApplicationFlags.FLAGS_NONE,
         )
 

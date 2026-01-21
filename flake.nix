@@ -42,6 +42,9 @@
           python-dateutil
           pillow
           piexif
+          scipy
+          scikit-image
+          opencv4
         ];
 
         systemDeps = with pkgs; [

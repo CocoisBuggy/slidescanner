@@ -164,7 +164,14 @@ class EventHandlers:
             if current_state != enabled:
                 self.window.auto_capture_switch.set_active(enabled)
         
-        # Here you could add logic to start/stop auto capture functionality
+        # Notify live view system of state change
+        if enabled:
+            self.window.live_view.on_auto_capture_enabled()
+            self._update_auto_capture_status("Waiting for image...")
+        else:
+            self.window.live_view.on_auto_capture_disabled()
+            self._update_auto_capture_status("")
+        
         print(f"Auto capture {'enabled' if enabled else 'disabled'}")
 
     def _update_date_override_visuals(self):
@@ -199,6 +206,17 @@ class EventHandlers:
                 self.window.cassette_date_status_label.get_style_context().remove_class(
                     "dimmed"
                 )
+
+    def _update_auto_capture_status(self, status_text: str):
+        """Update the auto capture status label."""
+        if hasattr(self.window, 'auto_capture_status_label'):
+            self.window.auto_capture_status_label.set_text(status_text)
+
+    def update_auto_capture_status_from_manager(self):
+        """Update status from auto capture manager (call this periodically)."""
+        if self.window.shared_state.auto_capture and hasattr(self.window, 'auto_capture_status_label'):
+            status = self.window.live_view.auto_capture_manager.get_status_text()
+            self._update_auto_capture_status(status)
 
     def on_picture_taken(self, shared_state, filename):
         """Handle picture taken event - clear slide date field."""

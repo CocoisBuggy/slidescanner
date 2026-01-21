@@ -1,6 +1,7 @@
 import pathlib
 
 import gi
+
 gi.require_version("GObject", "2.0")
 from gi.repository import GObject
 
@@ -22,8 +23,6 @@ class SharedState(GObject.Object):
     slide_label: str = ""
     quality_rating: int = 3  # Default 3-star rating
     slide_counter: int = 0  # Sequential counter for slides within cassette
-    auto_capture: bool = False  # Auto capture toggle state
-    auto_capture: bool = False  # Auto capture toggle state
     auto_capture: bool = False  # Auto capture toggle state
 
     __gsignals__ = {
