@@ -51,7 +51,7 @@ def needs_sdk(inner):
 # Global references for callbacks
 _global_camera_manager = None
 _global_shared_state = None
-_queued_photo_request: CassetteItem | None = None
+queued_photo_request: CassetteItem | None = None
 
 
 # Map format to file extension
@@ -68,7 +68,7 @@ format_to_extension = {
 
 # Object event callback (for image capture events)
 def _object_callback(event, object_ref, context):
-    global _global_camera_manager, _queued_photo_request
+    global _global_camera_manager, queued_photo_request
     print(f"Got object event from camera: {event}, {object_ref}")
 
     if event == kEdsObjectEvent_DirItemRequestTransfer:
@@ -77,19 +77,19 @@ def _object_callback(event, object_ref, context):
         if _global_camera_manager is not None:
             try:
                 # Download the image
-                if _queued_photo_request is None:
+                if queued_photo_request is None:
                     raise Exception("No queued request")
 
                 filename = _global_camera_manager.download_image(
                     object_ref,
-                    _queued_photo_request,
+                    queued_photo_request,
                 )
 
                 print(f"Successfully downloaded image: {filename}")
             except Exception as e:
                 print(f"Failed to download image: {e}")
 
-            _queued_photo_request = None
+            queued_photo_request = None
         else:
             print("No camera manager available for image download")
 
@@ -392,13 +392,13 @@ class CameraManager:
     @needs_sdk
     def take_picture(self, req: CassetteItem):
         """Take a picture using the camera."""
-        global _queued_photo_request
+        global queued_photo_request
         print("Taking picture...")
 
-        if _queued_photo_request is not None:
+        if queued_photo_request is not None:
             raise Exception("We are still waiting for the last photo to resolve")
 
-        _queued_photo_request = req
+        queued_photo_request = req
 
         # Use PressShutter instead of TakePicture command for better compatibility
         err = edsdk.EdsSendCommand(

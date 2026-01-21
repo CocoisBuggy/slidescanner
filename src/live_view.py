@@ -6,6 +6,7 @@ from gi.repository import GdkPixbuf, GLib
 from .application_abstract import SlideWindowAbstract
 from .auto_capture import AutoCaptureManager
 from .camera_core.err import CameraException, ErrorCode
+from .camera import queued_photo_request
 
 
 class LiveView:
@@ -34,13 +35,14 @@ class LiveView:
         while self.window.live_view_running and self.window.shared_state.camera:
             try:
                 data = self.window.shared_state.camera_manager.download_evf_image()
-                
+
                 # Process for auto-capture if enabled
                 if self.window.shared_state.auto_capture:
                     should_capture = self.auto_capture_manager.process_frame(data)
-                    if should_capture:
+
+                    if should_capture and queued_photo_request is None:
                         self._trigger_auto_capture()
-                
+
                 GLib.idle_add(self.update_live_view_image, data)
             except CameraException as e:
                 if e.err_code == ErrorCode.InvalidHandle:
@@ -74,7 +76,7 @@ class LiveView:
         """Called when auto-capture is enabled."""
         self.auto_capture_manager.reset()
         # Start status update timer
-        if hasattr(self.window, 'event_handlers'):
+        if hasattr(self.window, "event_handlers"):
             self._start_status_update_timer()
         print("Auto-capture: Enabled and ready")
 
@@ -82,17 +84,30 @@ class LiveView:
         """Called when auto-capture is disabled."""
         self.auto_capture_manager.reset()
         # Stop status update timer
-        if hasattr(self, '_status_update_timer_id'):
+        if hasattr(self, "_status_update_timer_id"):
             GLib.source_remove(self._status_update_timer_id)
             self._status_update_timer_id = None
         print("Auto-capture: Disabled")
 
     def _start_status_update_timer(self):
         """Start a timer to periodically update auto-capture status."""
+
         def update_status():
             if self.window.shared_state.auto_capture:
                 self.window.event_handlers.update_auto_capture_status_from_manager()
+                
+                # Update stability graph with recent data
+                if (hasattr(self.window, 'stability_graph') and 
+                    hasattr(self.auto_capture_manager, 'stability_history')):
+                    stability_data = self.auto_capture_manager.stability_history
+                    if stability_data:
+                        # Add the latest stability point to the graph
+                        latest_stability = stability_data[-1]
+                        self.window.stability_graph.add_data_point(latest_stability)
+                
                 return True  # Continue timer
             return False  # Stop timer
-        
-        self._status_update_timer_id = GLib.timeout_add(100, update_status)  # Update every 100ms
+
+        self._status_update_timer_id = GLib.timeout_add(
+            100, update_status
+        )  # Update every 100ms

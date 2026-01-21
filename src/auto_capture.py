@@ -48,6 +48,9 @@ class AutoCaptureManager:
         # Statistics
         self.total_frames_processed = 0
         self.captures_taken = 0
+        
+        # Stability tracking for graph
+        self.stability_history = []
 
     def process_frame(self, frame_data: bytes) -> bool:
         """
@@ -124,6 +127,7 @@ class AutoCaptureManager:
             self.last_image_data = None
             self.current_image_data = None
             self.stable_start_time = None
+            self.stability_history.clear()
             print("Auto-capture: State machine reset")
 
     def on_capture_completed(self):
@@ -163,7 +167,14 @@ class AutoCaptureManager:
         if np.isnan(correlation):
             correlation = 1.0 if np.array_equal(img1, img2) else 0.0
 
-        return max(0.0, correlation)  # Ensure non-negative
+        similarity = max(0.0, correlation)  # Ensure non-negative
+        
+        # Store stability for graph (keep only recent history)
+        self.stability_history.append(similarity)
+        if len(self.stability_history) > 100:
+            self.stability_history.pop(0)
+        
+        return similarity
 
     def _frame_data_to_array(self, frame_data: bytes) -> np.ndarray:
         """Convert frame data to numpy array for correlation analysis."""

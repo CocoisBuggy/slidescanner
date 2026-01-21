@@ -281,6 +281,16 @@ class UIComponents:
         self.window.auto_capture_status_label.get_style_context().add_class("caption")
         auto_capture_box.append(self.window.auto_capture_status_label)
 
+        # Stability graph
+        from .graphs import GraphManager
+        self.window.graph_manager = GraphManager()
+        self.window.stability_graph = self.window.graph_manager.create_stability_graph(
+            "stability", width=380, height=140
+        )
+        self.window.stability_graph.set_margin_top(8)
+        self.window.stability_graph.set_margin_bottom(4)
+        auto_capture_box.append(self.window.stability_graph)
+
         controls_frame = self.camera_controls.create_controls_box()
         left_panel.append(controls_frame)
 

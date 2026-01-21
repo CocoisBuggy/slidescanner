@@ -45,6 +45,7 @@
           scipy
           scikit-image
           opencv4
+          matplotlib
         ];
 
         systemDeps = with pkgs; [
