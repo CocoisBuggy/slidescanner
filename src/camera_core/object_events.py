@@ -1,7 +1,5 @@
 from enum import Enum
 
-from .err import EDS_ERR_OK
-
 
 class EdsObjectEventEnum(Enum):
     """Object events for camera file system operations."""

@@ -1,14 +1,16 @@
 import gi
 
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+
 from typing import Optional
+
 import time
 
 from matplotlib.lines import Line2D
 
 from .auto_capture import AutoCaptureManager
 
-gi.require_version("Gtk", "4.0")
-gi.require_version("Gdk", "4.0")
 from gi.repository import Gtk
 import matplotlib
 

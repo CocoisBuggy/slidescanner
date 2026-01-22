@@ -1,8 +1,10 @@
-import pathlib
-
 import gi
 
-gi.require_version("GObject", "2.0")
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+
+import pathlib
+
 from gi.repository import GObject
 
 from src.camera import CameraManager

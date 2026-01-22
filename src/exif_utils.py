@@ -1,7 +1,5 @@
 import io
-import os
 import subprocess
-import tempfile
 from typing import Optional
 from .picture import CassetteItem
 
@@ -139,7 +137,7 @@ def _create_xmp_sidecar(
     image_data: bytes, cassette_item: CassetteItem, filepath: str | None = None
 ) -> None:
     """Create XMP sidecar file for RAW files that don't support embedded EXIF (CRW, older RAW)."""
-    print(f"Creating XMP sidecar metadata for RAW file without embedded EXIF support")
+    print("Creating XMP sidecar metadata for RAW file without embedded EXIF support")
 
     if not filepath:
         print("No filepath provided for XMP sidecar creation")
@@ -261,7 +259,8 @@ def _add_embedded_metadata(
             # Load existing EXIF if available
             try:
                 exif_dict = piexif.load(image_data)
-            except:
+            except Exception as e:
+                print(e)
                 exif_dict = {"0th": {}, "Exif": {}, "1st": {}, "thumbnail": None}
 
             # Add metadata
@@ -274,15 +273,15 @@ def _add_embedded_metadata(
 
             if cassette_item.label:
                 if hasattr(piexif.ImageIFD, "ImageDescription"):
-                    exif_dict["0th"][piexif.ImageIFD.ImageDescription] = (
-                        cassette_item.label
-                    )
+                    exif_dict["0th"][
+                        piexif.ImageIFD.ImageDescription
+                    ] = cassette_item.label
 
             if cassette_item.name:
                 if hasattr(piexif.ImageIFD, "Copyright"):
-                    exif_dict["0th"][piexif.ImageIFD.Copyright] = (
-                        f"Cassette: {cassette_item.name}"
-                    )
+                    exif_dict["0th"][
+                        piexif.ImageIFD.Copyright
+                    ] = f"Cassette: {cassette_item.name}"
 
             if cassette_item.stars and 1 <= cassette_item.stars <= 5:
                 if hasattr(piexif.ExifIFD, "Rating"):

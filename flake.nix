@@ -26,6 +26,7 @@
 
           # GTK4 Python bindings
           pygobject3
+          pygobject-stubs
           pycairo
 
           # C++/Python binding tools
@@ -81,6 +82,7 @@
           valgrind
           clang-tools
           libusb1
+          glib
         ];
       in
       {
@@ -95,6 +97,7 @@
             # EDSDK library paths
             export EDSDK_ROOT="$(pwd)/EDSDK"
             export LD_LIBRARY_PATH="$EDSDK_ROOT/Library/x86_64:$LD_LIBRARY_PATH"
+            # export GIO_EXTRA_MODULES="${pkgs.glib.out}/lib/gio/modules"
 
             echo "Python + GTK4 + C++ bindings development environment ready"
             echo "Python version: $(python3 --version)"

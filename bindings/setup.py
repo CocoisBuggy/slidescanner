@@ -1,9 +1,6 @@
-import pybind11
-import pybind11.setup_helpers
 from pybind11.setup_helpers import Pybind11Extension, build_ext
-from setuptools import setup, Extension
+from setuptools import setup
 import os
-import sys
 
 # Get the current directory
 here = os.path.abspath(os.path.dirname(__file__))

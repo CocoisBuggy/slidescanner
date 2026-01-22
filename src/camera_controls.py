@@ -1,5 +1,3 @@
-import time
-from threading import Thread
 from gi.repository import Gtk, GLib
 
 from .camera_core.properties import EdsPropertyIDEnum, listeners
@@ -28,7 +26,9 @@ class CameraControls:
         )
 
         listeners[EdsPropertyIDEnum.Av].append(
-            lambda value: GLib.idle_add(self.window.aperture_label.set_label, str(value))
+            lambda value: GLib.idle_add(
+                self.window.aperture_label.set_label, str(value)
+            )
         )
 
     def create_controls_box(self):

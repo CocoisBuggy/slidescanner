@@ -2,9 +2,9 @@ from threading import Event, Thread
 
 from gi.repository import Gtk
 
-from .camera import CameraManager  # noqa: E402
+from .camera import CameraManager
 from .settings import Settings
-from .shared_state import SharedState  # noqa: E402
+from .shared_state import SharedState
 
 
 class SlideScannerAbstract(Gtk.Application):

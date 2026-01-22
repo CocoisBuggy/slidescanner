@@ -1,11 +1,12 @@
 import gi
 
-from .picture import CassetteItem
-from threading import Thread
-
 gi.require_version("Gtk", "4.0")
 
+from threading import Thread
+
 from gi.repository import Gdk, Gtk
+
+from .picture import CassetteItem
 
 
 class ShortcutsHandler:

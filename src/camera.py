@@ -27,15 +27,13 @@ from .camera_core import (
     kEdsCameraCommand_PressShutterButton,
     kEdsCameraCommand_ShutterButton_Completely_NonAF,
     kEdsCameraCommand_ShutterButton_OFF,
-    kEdsCameraCommand_DoEvfAf,
     kEdsCameraCommand_ShutterButton_Halfway,
     kEdsObjectEvent_All,
     kEdsObjectEvent_DirItemRequestTransfer,
     kEdsPropertyEvent_PropertyChanged,
     kEdsStateEvent_All,
-    kEdsStateEvent_AfResult,
 )
-from .camera_core.properties import waiting, state_waiting
+from .camera_core.properties import waiting
 
 
 def needs_sdk(inner):

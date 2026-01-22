@@ -4,16 +4,16 @@ from threading import Event, Thread
 
 import gi
 
-
 gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
 
-from gi.repository import Gio, Gtk  # noqa: E402
+from gi.repository import Gio
 
-from .settings import Settings  # noqa: E402
-from .application_abstract import SlideScannerAbstract  # noqa: E402
-from .camera import CameraManager  # noqa: E402
-from .shared_state import SharedState  # noqa: E402
-from .slide_scanner_window import SlideScannerWindow  # noqa: E402
+from .settings import Settings
+from .application_abstract import SlideScannerAbstract
+from .camera import CameraManager
+from .shared_state import SharedState
+from .slide_scanner_window import SlideScannerWindow
 
 
 class SlideScannerApplication(SlideScannerAbstract):
@@ -34,6 +34,7 @@ class SlideScannerApplication(SlideScannerAbstract):
         self.state.photo_location = self.settings.photo_location
 
     def do_activate(self):
+        global _global_shared_state
         # Initialize camera manager
         camera_status = "Initializing EDSDK..."
         print(camera_status)
@@ -45,7 +46,6 @@ class SlideScannerApplication(SlideScannerAbstract):
         print(camera_status)
 
         # Set global references for callbacks
-        from src.camera import _global_shared_state
 
         _global_shared_state = self.state
 
