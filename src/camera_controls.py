@@ -9,29 +9,26 @@ class CameraControls:
     def __init__(self, window):
         self.window = window
 
-        self.window.iso_spin = Gtk.SpinButton()
-        self.window.iso_spin.set_sensitive(False)
-        self.window.iso_spin.set_range(100, 128_000)
+        self.window.iso_label = Gtk.Label(label="--")
+        self.window.iso_label.set_halign(Gtk.Align.START)
 
-        self.window.shutter_spin = Gtk.SpinButton()
-        self.window.shutter_spin.set_sensitive(False)
-        self.window.shutter_spin.set_range(0, 100)
+        self.window.shutter_label = Gtk.Label(label="--")
+        self.window.shutter_label.set_halign(Gtk.Align.START)
 
-        self.window.aperture_spin = Gtk.SpinButton()
-        self.window.aperture_spin.set_sensitive(False)
-        self.window.aperture_spin.set_range(0, 50)
+        self.window.aperture_label = Gtk.Label(label="--")
+        self.window.aperture_label.set_halign(Gtk.Align.START)
 
         # Use GLib.idle_add to update GTK widgets from background threads
         listeners[EdsPropertyIDEnum.ISOSpeed].append(
-            lambda value: GLib.idle_add(self.window.iso_spin.set_value, value)
+            lambda value: GLib.idle_add(self.window.iso_label.set_label, str(value))
         )
 
         listeners[EdsPropertyIDEnum.Tv].append(
-            lambda value: GLib.idle_add(self.window.shutter_spin.set_value, value)
+            lambda value: GLib.idle_add(self.window.shutter_label.set_label, str(value))
         )
 
         listeners[EdsPropertyIDEnum.Av].append(
-            lambda value: GLib.idle_add(self.window.aperture_spin.set_value, value)
+            lambda value: GLib.idle_add(self.window.aperture_label.set_label, str(value))
         )
 
     def create_controls_box(self):
@@ -45,13 +42,22 @@ class CameraControls:
         controls_box.set_margin_end(12)
         controls_frame.set_child(controls_box)
 
-        controls_box.append(Gtk.Label(label="ISO:"))
-        controls_box.append(self.window.iso_spin)
+        # ISO
+        iso_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        iso_box.append(Gtk.Label(label="ISO:"))
+        iso_box.append(self.window.iso_label)
+        controls_box.append(iso_box)
 
-        controls_box.append(Gtk.Label(label="Shutter Speed:"))
-        controls_box.append(self.window.shutter_spin)
+        # Shutter Speed
+        shutter_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        shutter_box.append(Gtk.Label(label="Shutter:"))
+        shutter_box.append(self.window.shutter_label)
+        controls_box.append(shutter_box)
 
-        controls_box.append(Gtk.Label(label="Aperture:"))
-        controls_box.append(self.window.aperture_spin)
+        # Aperture
+        aperture_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        aperture_box.append(Gtk.Label(label="Aperture:"))
+        aperture_box.append(self.window.aperture_label)
+        controls_box.append(aperture_box)
 
         return controls_frame

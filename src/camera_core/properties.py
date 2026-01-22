@@ -24,20 +24,7 @@ from .sdk import (
     kEdsDataType_FocusInfo,
     kEdsDataType_PictureStyleDesc,
 )
-
-
-# Battery level constants
-class EdsBatteryLevel2(Enum):
-    Empty = 0
-    Low = 9
-    Quarter = 19
-    Half = 49
-    Hi = 69
-    Normal = 80
-    Error = 0
-    BCLevel = 0
-    AC = 0xFFFFFFFF
-    Unknown = 0xFFFFFFFE
+from .prop_values import EdsBatteryLevel2, ISOEnum, TvEnum, AvEnum
 
 
 def battery_level_to_percentage(level: int) -> int | None:
@@ -63,6 +50,61 @@ def battery_level_to_percentage(level: int) -> int | None:
     else:
         # Fallback for unknown values
         return None
+
+
+def iso_to_human_readable(value: int) -> str:
+    """Convert raw ISO value to human readable string."""
+    try:
+        iso = ISOEnum(value)
+        if iso == ISOEnum.Auto:
+            return "Auto"
+        else:
+            # Extract the ISO number from the enum name
+            name = iso.name.replace("ISO_", "")
+            if name.isdigit():
+                return f"ISO {name}"
+            return name
+    except ValueError:
+        return f"Unknown (0x{value:X})"
+
+
+def tv_to_human_readable(value: int) -> str:
+    """Convert raw shutter speed value to human readable string."""
+    try:
+        tv = TvEnum(value)
+        if tv == TvEnum.Auto:
+            return "Auto"
+        elif tv == TvEnum.Bulb:
+            return "Bulb"
+        elif tv.name.startswith("SEC_"):
+            # Extract seconds value
+            sec = tv.name.replace("SEC_", "").replace("_", ".")
+            return f'{sec}"'
+        elif tv.name.startswith("SPEED_"):
+            # Extract speed value (fraction of second)
+            speed = tv.name.replace("SPEED_", "")
+            return f'1/{speed}"'
+        else:
+            return tv.name
+    except ValueError:
+        return f"Unknown (0x{value:X})"
+
+
+def av_to_human_readable(value: int) -> str:
+    """Convert raw aperture value to human readable string."""
+    try:
+        av = AvEnum(value)
+        if av == AvEnum.AUTO:
+            return "Auto"
+        elif av.name.startswith("F"):
+            # Extract f-number (handle both F1_0 and F1.0 formats)
+            f_num = av.name[1:]  # Remove 'F' prefix
+            f_num = f_num.replace("_", ".")  # Replace underscores with dots
+            return f"f/{f_num}"
+        else:
+            return av.name
+    except ValueError:
+        return f"Unknown (0x{value:X})"
 
 
 # Property IDs
@@ -337,48 +379,73 @@ def _extract_property_data(camera, property_id):
 
     # Extract the value based on data type
     if data_type.value == kEdsDataType_UInt32:
-        # Special handling for BatteryLevel
+        raw_value = buffer.value
+        # Special handling for properties that need conversion
         if property_id == EdsPropertyIDEnum.BatteryLevel.value:
-            return battery_level_to_percentage(buffer.value)
-        return buffer.value
+            return battery_level_to_percentage(raw_value)
+        elif property_id == EdsPropertyIDEnum.ISOSpeed.value:
+            return iso_to_human_readable(raw_value)
+        elif property_id == EdsPropertyIDEnum.Tv.value:
+            return tv_to_human_readable(raw_value)
+        elif property_id == EdsPropertyIDEnum.Av.value:
+            return av_to_human_readable(raw_value)
+        return raw_value
     elif data_type.value == kEdsDataType_Int32:
         return buffer.value
     elif data_type.value == kEdsDataType_String:
         return buffer.value.decode("utf-8").rstrip("\x00")  # type: ignore
     elif data_type.value == kEdsDataType_Rational:
-        return {"numerator": buffer.numerator, "denominator": buffer.denominator}
+        if hasattr(buffer, "numerator"):
+            return {"numerator": buffer.numerator, "denominator": buffer.denominator}
+        else:
+            return buffer.value
     elif data_type.value == kEdsDataType_Point:
-        return {"x": buffer.x, "y": buffer.y}
+        if hasattr(buffer, "x"):
+            return {"x": buffer.x, "y": buffer.y}
+        else:
+            return buffer.value
     elif data_type.value == kEdsDataType_Rect:
-        return {
-            "x": buffer.x,
-            "y": buffer.y,
-            "width": buffer.width,
-            "height": buffer.height,
-        }
+        if hasattr(buffer, "x"):
+            return {
+                "x": buffer.x,
+                "y": buffer.y,
+                "width": buffer.width,
+                "height": buffer.height,
+            }
+        else:
+            return buffer.value
     elif data_type.value == kEdsDataType_Time:
-        return {
-            "year": buffer.year,
-            "month": buffer.month,
-            "day": buffer.day,
-            "hour": buffer.hour,
-            "minute": buffer.minute,
-            "second": buffer.second,
-            "milliseconds": buffer.milliseconds,
-        }
+        if hasattr(buffer, "year"):
+            return {
+                "year": buffer.year,
+                "month": buffer.month,
+                "day": buffer.day,
+                "hour": buffer.hour,
+                "minute": buffer.minute,
+                "second": buffer.second,
+                "milliseconds": buffer.milliseconds,
+            }
+        else:
+            return buffer.value
     elif data_type.value == kEdsDataType_FocusInfo:
         # Simplified - only returning basic info
-        return {"imageRect": buffer.imageRect, "pointNumber": buffer.pointNumber}
+        if hasattr(buffer, "imageRect"):
+            return {"imageRect": buffer.imageRect, "pointNumber": buffer.pointNumber}
+        else:
+            return buffer.value
     elif data_type.value == kEdsDataType_PictureStyleDesc:
-        return {
-            "contrast": buffer.contrast,
-            "sharpness": buffer.sharpness,
-            "saturation": buffer.saturation,
-            "colorTone": buffer.colorTone,
-            "filterEffect": buffer.filterEffect,
-            "toningEffect": buffer.toningEffect,
-            "sharpFineness": buffer.sharpFineness,
-            "sharpThreshold": buffer.sharpThreshold,
-        }
+        if hasattr(buffer, "contrast"):
+            return {
+                "contrast": buffer.contrast,
+                "sharpness": buffer.sharpness,
+                "saturation": buffer.saturation,
+                "colorTone": buffer.colorTone,
+                "filterEffect": buffer.filterEffect,
+                "toningEffect": buffer.toningEffect,
+                "sharpFineness": buffer.sharpFineness,
+                "sharpThreshold": buffer.sharpThreshold,
+            }
+        else:
+            return buffer.value
     else:
         return buffer.value

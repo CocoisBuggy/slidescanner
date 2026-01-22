@@ -41,8 +41,8 @@ class GraphWidget(Gtk.Box):
 
         # Set up the plot with proper margins
         self.ax = self.figure.add_subplot(111)
-        self.ax.set_facecolor("#f8f9fa")
-        self.figure.patch.set_facecolor("#ffffff")
+        self.ax.set_facecolor("#2b2b2b")
+        self.figure.patch.set_facecolor("#1e1e1e")
 
         # Adjust subplot parameters to prevent cropping
         self.figure.subplots_adjust(
@@ -53,10 +53,10 @@ class GraphWidget(Gtk.Box):
         )
 
         # Style the plot
-        self.ax.grid(True, alpha=0.3, linestyle="--")
-        self.ax.tick_params(colors="#666666")
+        self.ax.grid(True, alpha=0.3, linestyle="--", color="#555555")
+        self.ax.tick_params(colors="#cccccc")
         for spine in self.ax.spines.values():
-            spine.set_color("#cccccc")
+            spine.set_color("#555555")
             spine.set_linewidth(0.5)
 
         # Add canvas to the widget
@@ -77,18 +77,18 @@ class StabilityGraph(GraphWidget):
         super().__init__(width, height)
 
         # Configure the plot for stability data with smaller fonts and padding
-        self.ax.set_xlabel("Time (seconds)", fontsize=8, color="#333333")
-        self.ax.set_ylabel("Stability", fontsize=8, color="#333333")
+        self.ax.set_xlabel("Time (seconds)", fontsize=8, color="#cccccc")
+        self.ax.set_ylabel("Stability", fontsize=8, color="#cccccc")
         self.ax.set_ylim(0.0, 1.2)
         self.ax.set_title(
             "Image Stability Over Time",
             fontsize=9,
-            color="#333333",
+            color="#cccccc",
             pad=5,
         )
 
         # Create the line plot
-        self.lines = [self.ax.plot([], [])[0] for x in range(7)]
+        self.lines = [self.ax.plot([], [], alpha=0.6)[0] for x in range(7)]
         print(self.lines)
 
         # Initialize empty plot

@@ -1,19 +1,6 @@
 import contextlib
-import time
-from enum import Enum
-from threading import Lock
-from typing import Optional
 import numpy as np
 import cv2
-
-
-class AutoCaptureState(Enum):
-    """States for the auto-capture state machine."""
-
-    WAITING_FOR_NEW_IMAGE = "waiting_for_new_image"
-    MONITORING_STABILITY = "monitoring_stability"
-    STABLE = "stable"
-    CAPTURING = "capturing"
 
 
 class AutoCaptureManager:
@@ -22,11 +9,9 @@ class AutoCaptureManager:
     stability_threshold: float
     stability_duration: int
     prior_frames: list = []
-    state: AutoCaptureState
     total_frames_processed = 0
     stability_history = []
     last_captured_image: bytes | None = None
-    last_capture_time: float = 0
     stability_duration: int = 12
 
     def __init__(
@@ -68,18 +53,23 @@ class AutoCaptureManager:
         """
 
         with self.frame_context(frame_data):
+            if self.last_captured_image is not None:
+                if (
+                    self._calculate_frame_similarity(
+                        frame_data, self.last_captured_image
+                    )
+                    >= self.stability_threshold
+                ):
+                    return False
+                else:
+                    # We have a captured image that is not similar to our
+                    # prior image, so we're gonna reset
+                    self.last_captured_image = None
+                    self.prior_frames = [frame_data]
+                    return False
+
             if not self._is_image_stable(frame_data):
                 # The image is not stable
-                return False
-
-            if (
-                self.last_captured_image is not None
-                and self._calculate_frame_similarity(
-                    frame_data, self.last_captured_image
-                )
-                >= self.stability_threshold
-            ):
-                # The image is stable but we have a stable capture of it in any event
                 return False
 
             if len(self.prior_frames) < self.stability_duration:

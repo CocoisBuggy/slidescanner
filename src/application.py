@@ -75,7 +75,6 @@ class SlideScannerApplication(SlideScannerAbstract):
                         continue
 
                     if not self.camera_manager.get_camera_count():
-                        print("No Cameras Available")
                         continue
 
                     print("Camera count > 0")
