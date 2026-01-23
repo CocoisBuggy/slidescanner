@@ -1,6 +1,9 @@
 import ctypes
+import logging
 import traceback
 from threading import Event, Lock, Thread
+
+log = logging.getLogger(__name__)
 
 
 from src.camera_core.object_events import EdsObjectEventEnum
@@ -95,7 +98,7 @@ class Camera:
         return self.manager.set_property_value(self.ref, property_id, value)
 
     def start_live_view(self):
-        print("Gotta start live view")
+        log.info("Starting live view")
         self.manager.signal.emit(SignalName.LiveViewStarting.name)
 
         try:
@@ -157,7 +160,7 @@ class Camera:
                     traceback.print_exception(e)
                     self.emit(SignalName.TakePictureError)
 
-                print("Done with picture taking sequence!")
+                log.info("Done with picture taking sequence!")
                 clear_photo_request()
 
         if self.picture_lock.locked():
@@ -168,8 +171,8 @@ class Camera:
     def focus(self):
         """Perform auto-focus using the same approach as the Canon sample code."""
 
-        print("Starting auto-focus...")
-        print("Sending half-press shutter command...")
+        log.info("Starting auto-focus...")
+        log.debug("Sending half-press shutter command...")
         self.emit(SignalName.Focusing)
 
         err = edsdk.EdsSendCommand(
@@ -181,7 +184,7 @@ class Camera:
         if err != EDS_ERR_OK:
             raise CameraException(f"Failed to start auto-focus: {err}")
 
-        print("Half-press command sent successfully")
+        log.debug("Half-press command sent successfully")
         # Release the shutter button to end focus operation
         err = edsdk.EdsSendCommand(
             self.ref,
@@ -192,13 +195,13 @@ class Camera:
         if err != EDS_ERR_OK:
             raise CameraException(err)
 
-        print("Auto-focus completed")
+        log.info("Auto-focus completed")
         self.emit(SignalName.FocusDone)
         return True
 
     def take_picture(self, req: CassetteItem):
         """Take a picture using the camera."""
-        print("Taking picture...")
+        log.info("Taking picture...")
         set_next_photo_request(req)
         self.object_event[EdsObjectEventEnum.DirItemRequestTransfer].clear()
 

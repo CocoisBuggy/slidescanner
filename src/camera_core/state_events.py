@@ -1,7 +1,10 @@
+import logging
 from enum import Enum
 from threading import Event
 
 from .err import EDS_ERR_OK
+
+log = logging.getLogger(__name__)
 
 
 class StateEvent(Enum):
@@ -23,7 +26,7 @@ state: dict[StateEvent, Event] = {evt: Event() for evt in StateEvent}
 def _state_callback(event, param, context):
     """Handle state events (like AF results)."""
     global state
-    print(f"Got state event: {StateEvent(event)} - {hex(event)} (param: {param})")
+    log.debug(f"Got state event: {StateEvent(event)} - {hex(event)} (param: {param})")
 
     if event in state:
         state[event].set()

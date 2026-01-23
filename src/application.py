@@ -1,9 +1,13 @@
 import ctypes
+import logging
+import threading
 import time
 import traceback
 from threading import Event, Thread
 
 import gi
+
+log = logging.getLogger(__name__)
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
@@ -31,21 +35,21 @@ class SlideScannerApplication(Gtk.Application):
     def do_activate(self):
         # Initialize camera manager
         camera_status = "Initializing EDSDK..."
-        print(camera_status)
+        log.info(camera_status)
 
         if not self.state.camera_manager.initialize():
             raise Exception("EDSDK initialization failed")
 
         camera_status = "EDSDK initialized, waiting for camera..."
-        print(camera_status)
+        log.info(camera_status)
 
         def edsdk_subsystem():
-            print("Starting camera watcher")
+            log.info("Starting camera watcher")
 
             if not self.state.camera_manager.initialized.wait(3):
-                print("CAMERA MANAGER DID NOT INITIALIZE")
+                log.error("CAMERA MANAGER DID NOT INITIALIZE")
             else:
-                print("We are initialized nicely")
+                log.info("We are initialized nicely")
                 time.sleep(0.4)
 
             try:
@@ -69,21 +73,21 @@ class SlideScannerApplication(Gtk.Application):
                     if not self.state.camera_manager.get_camera_count():
                         continue
 
-                    print("Camera count > 0")
+                    log.info("Camera count > 0")
                     camera = self.state.camera_manager.get_camera(0)
 
                     if not camera:
-                        print(
-                            "Camera count was positive but we couldn't get the camera"
+                        log.warning(
+                            "Camera count was positive but we couldn't get camera"
                         )
                         continue
 
                     self.state.set_camera(camera)
             except Exception as e:
                 traceback.print_exception(e)
-                print(e)
+                log.error(e)
 
-            print("Leaving camera watcher routine")
+            log.info("Leaving camera watcher routine")
 
         win = SlideScannerWindow(self.state, application=self)
 

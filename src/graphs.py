@@ -1,9 +1,12 @@
 import gi
+import logging
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 
 import matplotlib
+
+log = logging.getLogger(__name__)
 
 matplotlib.use("GTK4Agg")
 
@@ -111,7 +114,7 @@ class StabilityGraph(GraphWidget):
             return
 
         if len(stability[-1]) != self.auto_capture.stability_duration:
-            print("INVALID data got added")
+            log.warning("INVALID data got added")
             return
 
         self.update_plot()

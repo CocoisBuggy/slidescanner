@@ -1,5 +1,7 @@
 import signal
 import sys
+import logging
+import sys
 
 
 from src.application import SlideScannerApplication
@@ -12,4 +14,13 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.getLogger("PIL").setLevel(logging.WARN)
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.WARN)
+
+    logging.basicConfig(
+        level=logging.DEBUG if "--verbose" in sys.argv else logging.INFO,
+        format="[%(levelname)s] %(message)s",
+        stream=sys.stdout,
+    )
+
     sys.exit(main())

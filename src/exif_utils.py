@@ -1,4 +1,5 @@
 import io
+import logging
 import subprocess
 from typing import Optional
 
@@ -7,6 +8,8 @@ from PIL import Image
 from PIL.ExifTags import TAGS
 
 from .picture import CassetteItem
+
+log = logging.getLogger(__name__)
 
 
 def add_metadata_to_image(
@@ -29,15 +32,17 @@ def add_metadata_to_image(
     Returns:
         Image data with metadata added, or original data if metadata writing fails
     """
-    print("METADATA TO ADD TO IMAGE:")
-    print(f"  Date: {cassette_item.date}")
-    print(f"  Label: {cassette_item.label}")
-    print(f"  Cassette: {cassette_item.name}")
-    print(f"  Format: 0x{image_format:08X}" if image_format else "  Format: Unknown")
+    log.debug("METADATA TO ADD TO IMAGE:")
+    log.debug(f"  Date: {cassette_item.date}")
+    log.debug(f"  Label: {cassette_item.label}")
+    log.debug(f"  Cassette: {cassette_item.name}")
+    log.debug(
+        f"  Format: 0x{image_format:08X}" if image_format else "  Format: Unknown"
+    )
 
     # Validate image data before processing
     if not image_data or len(image_data) < 100:
-        print("Invalid image data: too small or empty")
+        log.warning("Invalid image data: too small or empty")
         return image_data
 
     # Format-specific handling
@@ -48,7 +53,7 @@ def add_metadata_to_image(
         elif image_data.startswith(b"\x00\x00\x00\x18ftyp"):
             image_format = 0x00000008  # HEIF
         else:
-            print("Unknown image format, returning original data")
+            log.warning("Unknown image format, returning original data")
             return image_data
 
     # Handle RAW formats based on their EXIF support
@@ -66,7 +71,7 @@ def add_metadata_to_image(
         return _add_embedded_metadata(image_data, cassette_item, image_format)
 
     # Unknown format, return original
-    print(f"Unsupported format 0x{image_format:08X}, returning original data")
+    log.warning(f"Unsupported format 0x{image_format:08X}, returning original data")
     return image_data
 
 
@@ -76,17 +81,17 @@ def _update_cr3_metadata(
     filepath: str | None = None,
 ) -> None:
     """Update CR3 metadata using exiftool subprocess."""
-    print("Updating CR3 metadata using exiftool")
+    log.debug("Updating CR3 metadata using exiftool")
 
     if not filepath:
-        print("No filepath provided for CR3 metadata update")
+        log.error("No filepath provided for CR3 metadata update")
         return
 
     try:
         # Check if exiftool is available
         subprocess.run(["exiftool", "-ver"], capture_output=True, check=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
-        print("exiftool not available, creating XMP sidecar instead")
+        log.warning("exiftool not available, creating XMP sidecar instead")
         _create_xmp_sidecar(image_data, cassette_item, filepath)
         return
 
@@ -113,23 +118,23 @@ def _update_cr3_metadata(
         filepath,
     ]
 
-    print(f"Running exiftool command: {' '.join(cmd)}")
+    log.debug(f"Running exiftool command: {' '.join(cmd)}")
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
-        print(f"exiftool return code: {result.returncode}")
-        print(f"exiftool stdout: {result.stdout}")
+        log.debug(f"exiftool return code: {result.returncode}")
+        log.debug(f"exiftool stdout: {result.stdout}")
         if result.stderr:
-            print(f"exiftool stderr: {result.stderr}")
+            log.debug(f"exiftool stderr: {result.stderr}")
 
         if result.returncode == 0:
-            print(f"CR3 metadata updated successfully: {filepath}")
+            log.debug(f"CR3 metadata updated successfully: {filepath}")
         else:
-            print(f"exiftool failed: {result.stderr}")
+            log.error(f"exiftool failed: {result.stderr}")
             # Fallback to XMP sidecar
             _create_xmp_sidecar(image_data, cassette_item, filepath)
     except Exception as e:
-        print(f"Failed to update CR3 metadata: {e}")
+        log.error(f"Failed to update CR3 metadata: {e}")
         # Fallback to XMP sidecar
         _create_xmp_sidecar(image_data, cassette_item, filepath)
 
@@ -138,10 +143,12 @@ def _create_xmp_sidecar(
     image_data: bytes, cassette_item: CassetteItem, filepath: str | None = None
 ) -> None:
     """Create XMP sidecar file for RAW files that don't support embedded EXIF (CRW, older RAW)."""
-    print("Creating XMP sidecar metadata for RAW file without embedded EXIF support")
+    log.debug(
+        "Creating XMP sidecar metadata for RAW file without embedded EXIF support"
+    )
 
     if not filepath:
-        print("No filepath provided for XMP sidecar creation")
+        log.error("No filepath provided for XMP sidecar creation")
         return
 
     # Create XMP file path
@@ -185,9 +192,9 @@ def _create_xmp_sidecar(
         # Write XMP file
         with open(xmp_filepath, "w", encoding="utf-8") as f:
             f.write(xmp_content)
-        print(f"XMP sidecar created: {xmp_filepath}")
+        log.debug(f"XMP sidecar created: {xmp_filepath}")
     except Exception as e:
-        print(f"Failed to create XMP sidecar: {e}")
+        log.error(f"Failed to create XMP sidecar: {e}")
 
 
 def _add_embedded_metadata(
@@ -206,7 +213,7 @@ def _add_embedded_metadata(
                     # Need to reopen after verify
                     image = Image.open(io.BytesIO(image_data))
             except Exception as img_error:
-                print(f"Cannot identify image file: {img_error}")
+                log.warning(f"Cannot identify image file: {img_error}")
                 return image_data
 
             # Get existing EXIF data
@@ -242,17 +249,17 @@ def _add_embedded_metadata(
                 image.save(
                     output_buffer, format="JPEG", exif=exif_dict.tobytes(), quality=95
                 )
-                print("EXIF metadata added successfully using Pillow")
+                log.debug("EXIF metadata added successfully using Pillow")
                 return output_buffer.getvalue()
             elif hasattr(exif_dict, "save"):
                 # For newer Pillow versions
                 output_buffer = io.BytesIO()
                 image.save(output_buffer, format="JPEG", exif=exif_dict, quality=95)
-                print("EXIF metadata added successfully using Pillow")
+                log.debug("EXIF metadata added successfully using Pillow")
                 return output_buffer.getvalue()
 
         except ImportError:
-            print("PIL/Pillow not available, skipping EXIF writing")
+            log.warning("PIL/Pillow not available, skipping EXIF writing")
 
         # Try using piexif if available
         try:
@@ -260,7 +267,7 @@ def _add_embedded_metadata(
             try:
                 exif_dict = piexif.load(image_data)
             except Exception as e:
-                print(e)
+                log.debug(e)
                 exif_dict = {"0th": {}, "Exif": {}, "1st": {}, "thumbnail": None}
 
             # Add metadata
@@ -288,17 +295,17 @@ def _add_embedded_metadata(
             image = Image.open(io.BytesIO(image_data))
             output_buffer = io.BytesIO()
             image.save(output_buffer, format="JPEG", exif=exif_bytes, quality=95)
-            print("EXIF metadata added successfully using piexif")
+            log.debug("EXIF metadata added successfully using piexif")
             return output_buffer.getvalue()
 
         except ImportError:
-            print("piexif not available, skipping EXIF writing")
+            log.warning("piexif not available, skipping EXIF writing")
 
     except Exception as e:
-        print(f"Warning: Failed to add metadata to image: {e}")
+        log.warning(f"Failed to add metadata to image: {e}")
 
     # Return original image data if EXIF writing fails or libraries not available
-    print("Returning original image data without EXIF modifications")
+    log.debug("Returning original image data without EXIF modifications")
     return image_data
 
 

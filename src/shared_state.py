@@ -1,3 +1,4 @@
+import logging
 from threading import Thread
 import gi
 
@@ -6,6 +7,8 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 
 import pathlib
+
+log = logging.getLogger(__name__)
 
 from gi.repository import GObject
 
@@ -63,7 +66,7 @@ class SharedState(GObject.GObject):
         self._camera = cam
 
     def on_camera_connected(self, *_):
-        print("A camera has connected to us!")
+        log.info("A camera has connected to us!")
 
         if self.camera is None:
             raise Exception("WHY did we connect to a camera that doesn't exist?")
@@ -75,10 +78,10 @@ class SharedState(GObject.GObject):
                 self.camera.get_property_value(EdsPropertyIDEnum.BatteryLevel)
             )
         except CameraException as e:
-            print(f"Failed to get initial battery level: {e}")
+            log.warning(f"Failed to get initial battery level: {e}")
 
     def set_camera(self, cam: EdsCameraRef | None):
-        print(f"setting active camera {cam}")
+        log.info(f"setting active camera {cam}")
         if self.camera is not None:
             self.camera.close()
 

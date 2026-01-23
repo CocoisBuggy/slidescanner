@@ -1,9 +1,12 @@
 import gi
+import logging
 
 
 gi.require_version("Gtk", "4.0")
 
 from threading import Thread
+
+log = logging.getLogger(__name__)
 
 from gi.repository import Gdk, Gtk
 
@@ -40,7 +43,7 @@ class ShortcutsHandler:
         return False  # Event not handled
 
     def capture_image(self):
-        print("Capture image shortcut triggered")
+        log.debug("Capture image shortcut triggered")
         self.state.emit(SignalName.TakePicture.name)
 
     def open_settings(self):
@@ -52,12 +55,12 @@ class ShortcutsHandler:
 
     def quit_application(self):
         """Handle Ctrl+Q: Quit application."""
-        print("Quit application shortcut triggered")
+        log.debug("Quit application shortcut triggered")
         self.window.get_application().quit()
 
     def next_cassette(self):
         """Handle Ctrl+N: Move to next cassette."""
-        print("Next cassette shortcut triggered")
+        log.debug("Next cassette shortcut triggered")
         self.state.next_cassette()
 
     def show_shortcuts_dialog(self):

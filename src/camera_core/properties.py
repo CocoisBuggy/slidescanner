@@ -1,7 +1,10 @@
 import ctypes
+import logging
 from enum import Enum
 from threading import Event
 from typing import Any, Callable
+
+log = logging.getLogger(__name__)
 
 from .err import EDS_ERR_OK, CameraException
 from .prop_values import AvEnum, EdsBatteryLevel2, ISOEnum, TvEnum
@@ -273,12 +276,12 @@ def _property_callback(event, property_id: int, param, context):
     global waiting, results
     try:
         property = EdsPropertyIDEnum(property_id)
-        print(
+        log.debug(
             f"Got property change: {property} (event: {EdsPropertyEventKind(event)}, param: {param})"
         )
 
     except ValueError:
-        print(
+        log.warning(
             f"Got property event change on prop_id: {property_id} (event: {EdsPropertyEventKind(event)}, param: {param}) "
             " but we do not have a corresponding understanding of this code in our enum"
         )

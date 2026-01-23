@@ -4,11 +4,14 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 
+import logging
 import time
 import traceback
 from threading import Thread
 
 from gi.repository import GdkPixbuf, GLib, Gtk
+
+log = logging.getLogger(__name__)
 
 from .camera_core.download import get_current_photo_request, set_next_photo_request
 from .camera_core.err import CameraException, ErrorCode
@@ -102,13 +105,13 @@ class LiveView(Gtk.Frame):
 
             except Exception as e:
                 traceback.print_exception(e)
-                print(f"Live view error: {e}")
+                log.error(f"Live view error: {e}")
                 time.sleep(1)
             time.sleep(0.1)
 
     def _trigger_capture(self):
         """Trigger an automatic capture using the same logic as manual capture."""
-        print("Auto-capture: Triggering automatic photo capture")
+        log.info("Auto-capture: Triggering automatic photo capture")
         self.state.emit(SignalName.TakePicture.name)
 
     def update_live_view_image(self, data):
@@ -120,9 +123,9 @@ class LiveView(Gtk.Frame):
             if pixbuf:
                 self.live_view_image.set_pixbuf(pixbuf)
             else:
-                print("Pixbuf is None")
+                log.warning("Pixbuf is None")
         except Exception as e:
-            print(f"Failed to load image: {e}")
+            log.error(f"Failed to load image: {e}")
 
     def on_auto_capture_disabled(self):
         """Called when auto-capture is disabled."""

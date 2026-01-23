@@ -1,5 +1,8 @@
+import logging
 from gi.repository import Gtk
 from typing_extensions import Callable
+
+log = logging.getLogger(__name__)
 
 from src.camera import Camera
 from src.camera_core.properties import (
@@ -16,7 +19,7 @@ from src.shared_state import SharedState
 def uses_camera(wrapped) -> Callable[["CameraSettings"], None]:
     def inner(self):
         if self.state._camera is None:
-            print("This class member needs state._camera to be ascociated")
+            log.warning("This class member needs state._camera to be associated")
             return
 
         wrapped(self, self.state._camera)

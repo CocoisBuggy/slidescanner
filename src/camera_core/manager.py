@@ -1,6 +1,9 @@
 import ctypes
+import logging
 from threading import Event
 from typing import Any, Callable, Protocol
+
+log = logging.getLogger(__name__)
 
 from gi.repository import GObject
 
@@ -145,13 +148,13 @@ class CameraManager:
 
     @needs_sdk
     def open_session(self, camera: EdsCameraRef):
-        print("We are going to open a session to the camera")
+        log.info("We are going to open a session to the camera")
 
         self.set_property_event_handler(camera)
         self.set_object_event_handler(camera)
         self.set_state_event_handler(camera)
 
-        print("All events are set up for handle")
+        log.debug("All events are set up for handle")
 
         self.signal.emit(SignalName.CameraConnecting.name)
         err = edsdk.EdsOpenSession(camera)
@@ -161,7 +164,7 @@ class CameraManager:
             # This ensures captured images are transferred to the computer
             try:
                 self.set_property_value(camera, EdsPropertyIDEnum.SaveTo, 2)
-                print("Set save destination to PC")
+                log.info("Set save destination to PC")
 
                 # When saving to Host, set capacity to indicate available space
                 capacity = EdsCapacity(
@@ -178,7 +181,7 @@ class CameraManager:
                 self.signal.emit(SignalName.CameraConnected.name)
 
             except Exception as e:
-                print(f"Failed to set save destination: {e}")
+                log.error(f"Failed to set save destination: {e}")
 
             return True
 
