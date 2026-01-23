@@ -193,7 +193,7 @@ class CameraManager:
             camera,
             kEdsPropertyEvent_PropertyChanged,
             _property_handler,
-            ctypes.py_object(self),
+            ctypes.py_object(camera),
         )
 
         if err != EDS_ERR_OK:

@@ -260,7 +260,9 @@ class EdsPropertyIDEnum(Enum):
 
 results: dict[EdsPropertyIDEnum, Any] = {}
 waiting: dict[EdsPropertyIDEnum, Event] = {p: Event() for p in EdsPropertyIDEnum}
-listeners: dict[EdsPropertyIDEnum, list[Callable]] = {p: [] for p in EdsPropertyIDEnum}
+listeners: dict[EdsPropertyIDEnum, list[Callable[[], None]]] = {
+    p: [] for p in EdsPropertyIDEnum
+}
 
 
 def _property_callback(event, property_id: int, param, context):
@@ -274,6 +276,7 @@ def _property_callback(event, property_id: int, param, context):
         print(
             f"Got property change: {property} (event: {EdsPropertyEventKind(event)}, param: {param})"
         )
+
     except ValueError:
         print(
             f"Got property event change on prop_id: {property_id} (event: {EdsPropertyEventKind(event)}, param: {param}) "
@@ -283,7 +286,7 @@ def _property_callback(event, property_id: int, param, context):
 
     waiting[property].set()
     for listener in listeners[property]:
-        listener(results.get(property))
+        listener()
 
     return EDS_ERR_OK
 
@@ -331,8 +334,13 @@ def _extract_property_data(camera, property_id):
     size = EdsUInt32()
     data_type = EdsUInt32()
     err = edsdk.EdsGetPropertySize(
-        camera, property_id, 0, ctypes.byref(size), ctypes.byref(data_type)
+        camera,
+        property_id,
+        0,
+        ctypes.byref(size),
+        ctypes.byref(data_type),
     )
+
     if err != EDS_ERR_OK:
         raise CameraException(f"Failed to get property size: {err}")
 

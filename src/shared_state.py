@@ -72,7 +72,7 @@ class SharedState(GObject.GObject):
 
         try:
             self.battery_level = battery_level_to_percentage(
-                self.camera.get_property_value(EdsPropertyIDEnum.BatteryLevel.value)
+                self.camera.get_property_value(EdsPropertyIDEnum.BatteryLevel)
             )
         except CameraException as e:
             print(f"Failed to get initial battery level: {e}")

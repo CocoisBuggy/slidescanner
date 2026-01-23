@@ -7,9 +7,9 @@ from gi.repository import Gtk
 
 from src.constants import INNER_PADDING
 
-from .camera_controls import CameraControls
 from .components.auto_capture import AutoCapture
 from .components.cassette_info import CassetteInfo
+from .components.camera_settings import CameraSettings
 from .shared_state import SharedState
 from .shortcuts import ShortcutsHandler
 from .tool_bar import create_toolbar
@@ -76,7 +76,7 @@ class MainContent(Gtk.Box):
 
         left_panel.append(camera_info_frame)
         left_panel.append(CassetteInfo(self.state))
-        left_panel.append(CameraControls(self.state))
+        left_panel.append(CameraSettings(self.state))
         left_panel.append(AutoCapture(self.state))
 
         return scrolled_window

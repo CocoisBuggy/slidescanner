@@ -24,7 +24,7 @@ from .camera_core import (
     kEdsCameraCommand_ShutterButton_Halfway,
     kEdsCameraCommand_ShutterButton_OFF,
 )
-from .camera_core.download import set_next_photo_request
+from .camera_core.download import clear_photo_request, set_next_photo_request
 from .camera_core.manager import CameraManager
 from .camera_core.properties import waiting
 
@@ -76,11 +76,11 @@ class Camera:
 
         return device_info
 
-    def get_property_value(self, property_id) -> int:
+    def get_property_value(self, property_id: EdsPropertyIDEnum) -> int:
         value = EdsUInt32()
         err = edsdk.EdsGetPropertyData(
             self.ref,
-            property_id,
+            property_id.value,
             0,
             ctypes.sizeof(EdsUInt32),
             ctypes.byref(value),
@@ -158,6 +158,10 @@ class Camera:
                     self.emit(SignalName.TakePictureError)
 
                 print("Done with picture taking sequence!")
+                clear_photo_request()
+
+        if self.picture_lock.locked():
+            return
 
         Thread(target=inner).start()
 
