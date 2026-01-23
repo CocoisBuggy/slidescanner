@@ -1,5 +1,7 @@
 # Coco's Scanner
 
+![Main UI](./asset/main_ui.png)
+
 rationale: Why build this?
 
 I have a canon camera, along with an adapter for my macro lens that lets
