@@ -1,5 +1,3 @@
-from .err import EDS_ERR_OK, ErrorCode, CameraException
-from .properties import EdsPropertyIDEnum, _property_callback, _state_callback
 from .sdk import (
     EdsError,
     EdsBaseRef,
@@ -40,6 +38,10 @@ from .sdk import (
     kEdsStateEvent_InternalError,
     kEdsStateEvent_AfResult,
 )
+from .err import EDS_ERR_OK, ErrorCode, CameraException
+from .properties import EdsPropertyIDEnum, _property_callback
+from .state_events import _state_callback, StateEvent
+from .manager import CameraManager
 
 
 __all__ = [
@@ -87,4 +89,6 @@ __all__ = [
     "_property_callback",
     "_state_callback",
     "CameraException",
+    "CameraManager",
+    "StateEvent",
 ]

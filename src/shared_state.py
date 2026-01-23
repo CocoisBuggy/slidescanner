@@ -1,4 +1,6 @@
+from threading import Thread
 import gi
+
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
@@ -7,165 +9,92 @@ import pathlib
 
 from gi.repository import GObject
 
-from src.camera import CameraManager
-from src.camera_core import EdsCameraRef
+from src.camera_core import CameraManager, EdsCameraRef
+
+from .camera import Camera
+from .camera_core import EdsPropertyIDEnum
+from .camera_core.properties import battery_level_to_percentage
+from .camera_core.err import CameraException
+from .picture import CassetteItem
+from .settings import Settings
+from .common_signal import SignalName
 
 
-class SharedState(GObject.Object):
+class SharedState(GObject.GObject):
     """Shared state manager with GTK signals for application-wide communication."""
 
-    camera: EdsCameraRef | None = None
-    camera_name: str | None = None
-    battery_level: int | None = None  # Battery level 0-100 or None
+    _settings: Settings = Settings()
+    _camera: Camera | None = None
+    _battery_level: int | None = None  # Battery level 0-100 or None
 
-    # Cassette context
-    cassette_name: str = ""
-    cassette_date: str = ""  # Year
-    slide_date: str = ""  # Individual slide date (optional, overrides cassette date)
-    slide_label: str = ""
-    quality_rating: int = 3  # Default 3-star rating
+    cassette = CassetteItem()
     slide_counter: int = 0  # Sequential counter for slides within cassette
-    auto_capture: bool = False  # Auto capture toggle state
+    _auto_capture: bool = False  # Auto capture toggle state
 
     __gsignals__ = {
-        "camera-name": (
-            GObject.SignalFlags.RUN_FIRST,
-            None,
-            (str,),  # camera_name
-        ),
-        "battery-level-changed": (
-            GObject.SignalFlags.RUN_FIRST,
-            None,
-            (GObject.TYPE_PYOBJECT,),  # battery_level: int or None
-        ),
-        "cassette-context-changed": (
-            GObject.SignalFlags.RUN_FIRST,
-            None,
-            (),
-        ),
-        "picture-taken": (
-            GObject.SignalFlags.RUN_FIRST,
-            None,
-            (str,),  # filename
-        ),
-        "auto-capture-changed": (
-            GObject.SignalFlags.RUN_FIRST,
-            None,
-            (GObject.TYPE_PYOBJECT,),  # auto_capture: bool
-        ),
+        sig.name: (GObject.SignalFlags.RUN_FIRST, None, ()) for sig in SignalName
     }
 
-    def __init__(self, camera_manager: CameraManager):
+    def __init__(self):
         super().__init__()
-        self.camera_manager = camera_manager
+        self.camera_manager = CameraManager(self)
         self.photo_location = str(pathlib.Path.home() / "Pictures")
+
+        self.connect(SignalName.CameraConnected.name, self.on_camera_connected)
+
+    @GObject.Property(type=int)
+    def battery_level(self):
+        return self._battery_level
+
+    @battery_level.setter
+    def battery_level(self, p):
+        self._battery_level = p
+
+    @GObject.Property(type=GObject.TYPE_PYOBJECT)
+    def camera(self):
+        return self._camera
+
+    @camera.setter
+    def camera(self, cam: Camera | None):
+        if cam is None:
+            if self._camera:
+                self._camera.close()
+
+        self._camera = cam
+
+    @GObject.Property(type=bool, default=False)
+    def auto_capture(self):
+        return self._auto_capture
+
+    @auto_capture.setter
+    def auto_capture(self, val):
+        self._auto_capture = val
+
+    def on_camera_connected(self, *_):
+        print("A camera has connected to us!")
+
+        if self.camera is None:
+            raise Exception("WHY did we connect to a camera that doesn't exist?")
+
+        Thread(target=self.camera.start_live_view).start()
+
+        try:
+            self.battery_level = battery_level_to_percentage(
+                self.camera.get_property_value(EdsPropertyIDEnum.BatteryLevel.value)
+            )
+        except CameraException as e:
+            print(f"Failed to get initial battery level: {e}")
 
     def set_camera(self, cam: EdsCameraRef | None):
         print(f"setting active camera {cam}")
-        self.camera = cam
+        if self.camera is not None:
+            self.camera.close()
 
-        if self.camera is None:
-            self.camera_name = None
+        if cam is None:
+            self.camera = cam
+            self.live_view = False
             self.battery_level = None
-        else:
-            self.camera_manager.open_session(cam)
-            import time
+            return
 
-            time.sleep(1.0)
-            self.camera_manager.set_property_event_handler()
-            self.camera_manager.set_object_event_handler()
-            time.sleep(0.5)
-            self.camera_manager.start_live_view()
-            time.sleep(1.5)
-
-            dev_info = self.camera_manager.get_device_info(cam)
-
-            if dev_info is None:
-                raise Exception("We really expected dev info")
-
-            self.camera_name = dev_info.szDeviceDescription.decode("utf8")
-            print(f"Active camera name: {self.camera_name}")
-
-            # Get initial battery level
-            try:
-                from .camera_core import EdsPropertyIDEnum
-
-                battery_level = self.camera_manager.get_property_value(
-                    EdsPropertyIDEnum.BatteryLevel.value
-                )
-                if battery_level is not None:
-                    from .camera_core.properties import battery_level_to_percentage
-
-                    percentage = battery_level_to_percentage(battery_level)
-                    self.set_battery_level(percentage)
-            except Exception as e:
-                print(f"Failed to get initial battery level: {e}")
-
-        self.emit("camera-name", self.camera_name)
-
-    def set_battery_level(self, level: int | None):
-        """Set the battery level (0-100 or None for unknown/AC)."""
-        self.battery_level = level
-        self.emit("battery-level-changed", level)
-
-    def set_cassette_name(self, name: str):
-        """Set the current cassette name."""
-        self.cassette_name = name
-        self.emit("cassette-context-changed")
-
-    def set_cassette_date(self, date: str):
-        """Set the current cassette date (year)."""
-        self.cassette_date = date
-        self.emit("cassette-context-changed")
-
-    def set_slide_date(self, date: str):
-        """Set the current slide date (optional, overrides cassette date)."""
-        self.slide_date = date
-        self.emit("cassette-context-changed")
-
-    def set_slide_label(self, label: str):
-        """Set the current slide label."""
-        self.slide_label = label
-        self.emit("cassette-context-changed")
-
-    def set_quality_rating(self, rating: int):
-        """Set the quality rating (1-5)."""
-        if 1 <= rating <= 5:
-            self.quality_rating = rating
-            self.emit("cassette-context-changed")
-
-    def notify_picture_taken(self, filename: str):
-        """Notify that a picture has been successfully taken."""
-        self.emit("picture-taken", filename)
-
-    def set_auto_capture(self, enabled: bool):
-        """Set the auto capture toggle state."""
-        self.auto_capture = enabled
-        self.emit("auto-capture-changed", enabled)
-
-    def next_cassette(self):
-        """Move to the next cassette (increment cassette number and reset counter)."""
-        # Reset slide counter for new cassette
-        self.slide_counter = 0
-
-        # Clear cassette name for user input
-        self.cassette_name = ""
-
-        # Reset other context
-        self.cassette_date = ""
-        self.slide_date = ""
-        self.slide_label = ""
-        self.quality_rating = 3
-        self.emit("cassette-context-changed")
-
-    def get_next_slide_filename(self, extension=".jpg"):
-        """Get the next sequential filename for the current cassette."""
-        self.slide_counter += 1
-        cassette_name = self.cassette_name.strip()
-        if not cassette_name:
-            cassette_name = "Unknown"
-        # Replace spaces and special characters with underscores
-        safe_name = "".join(
-            c if c.isalnum() or c in "._-" else "_" for c in cassette_name
-        )
-        return f"{safe_name}_{self.slide_counter:03d}{extension}"
+        self.camera = Camera(self.camera_manager, cam)
+        Thread(target=self.camera_manager.open_session, args=(cam,)).start()

@@ -1,30 +1,30 @@
-from enum import Enum
-
 import ctypes
+from enum import Enum
 from threading import Event
 from typing import Any, Callable
+
 from .err import EDS_ERR_OK, CameraException
+from .prop_values import AvEnum, EdsBatteryLevel2, ISOEnum, TvEnum
 from .sdk import (
-    edsdk,
-    EdsUInt32,
+    EdsFocusInfo,
     EdsInt32,
-    EdsRational,
+    EdsPictureStyleDesc,
     EdsPoint,
+    EdsRational,
     EdsRect,
     EdsTime,
-    EdsFocusInfo,
-    EdsPictureStyleDesc,
-    kEdsDataType_UInt32,
-    kEdsDataType_Int32,
-    kEdsDataType_String,
-    kEdsDataType_Rational,
-    kEdsDataType_Point,
-    kEdsDataType_Rect,
-    kEdsDataType_Time,
+    EdsUInt32,
+    edsdk,
     kEdsDataType_FocusInfo,
+    kEdsDataType_Int32,
     kEdsDataType_PictureStyleDesc,
+    kEdsDataType_Point,
+    kEdsDataType_Rational,
+    kEdsDataType_Rect,
+    kEdsDataType_String,
+    kEdsDataType_Time,
+    kEdsDataType_UInt32,
 )
-from .prop_values import EdsBatteryLevel2, ISOEnum, TvEnum, AvEnum
 
 
 def battery_level_to_percentage(level: int) -> int | None:
@@ -105,6 +105,13 @@ def av_to_human_readable(value: int) -> str:
             return av.name
     except ValueError:
         return f"Unknown (0x{value:X})"
+
+
+class EdsPropertyEventKind(Enum):
+    All = 0x100
+    PropertyChanged = 0x101
+    PropertyDescChanged = 0x102
+    PropertyDescExChanged = 0x110
 
 
 # Property IDs
@@ -248,68 +255,35 @@ class EdsPropertyIDEnum(Enum):
     DC_Zoom = 0x00000600
     DC_Strobe = 0x00000601
     LensBarrelStatus = 0x00000605
+    PropertyChanged = 0x101
 
 
 results: dict[EdsPropertyIDEnum, Any] = {}
 waiting: dict[EdsPropertyIDEnum, Event] = {p: Event() for p in EdsPropertyIDEnum}
 listeners: dict[EdsPropertyIDEnum, list[Callable]] = {p: [] for p in EdsPropertyIDEnum}
 
-# State event waiting
-state_waiting: dict[int, Event] = {
-    0x00000300: Event(),  # kEdsStateEvent_All
-    0x00000301: Event(),  # kEdsStateEvent_Shutdown
-    0x00000302: Event(),  # kEdsStateEvent_JobStatusChanged
-    0x00000303: Event(),  # kEdsStateEvent_WillSoonShutDown
-    0x00000304: Event(),  # kEdsStateEvent_ShutDownTimerUpdate
-    0x00000305: Event(),  # kEdsStateEvent_CaptureError
-    0x00000306: Event(),  # kEdsStateEvent_InternalError
-    0x00000309: Event(),  # kEdsStateEvent_AfResult
-}
-
 
 def _property_callback(event, property_id: int, param, context):
-    """Extract property data from camera when properties change."""
+    """
+    We ideally want a robust method by which we can notify our application
+    when the camera actually CHANGES one of its attributes
+    """
     global waiting, results
-    property = EdsPropertyIDEnum(property_id)
-    print(f"Got property change: {property} (event: {event}, param: {param})", end=" ")
-
-    # Extract the camera manager from context
-    if context:
-        try:
-            manager = ctypes.cast(context, ctypes.py_object).value
-            if hasattr(manager, "camera") and manager.camera:
-                # Get the actual property data
-                try:
-                    data = _extract_property_data(manager.camera, property_id)
-                    results[property] = data
-                    print(f"Got data: {data}")
-
-                    # Special handling for battery level
-                    if property == EdsPropertyIDEnum.BatteryLevel:
-                        from src.camera import _global_shared_state
-
-                        if _global_shared_state:
-                            _global_shared_state.set_battery_level(data)
-
-                except Exception as e:
-                    print(f"Failed to extract property data: {e}")
-        except Exception as e:
-            print(f"Failed to extract manager from context: {e}")
+    try:
+        property = EdsPropertyIDEnum(property_id)
+        print(
+            f"Got property change: {property} (event: {EdsPropertyEventKind(event)}, param: {param})"
+        )
+    except ValueError:
+        print(
+            f"Got property event change on prop_id: {property_id} (event: {EdsPropertyEventKind(event)}, param: {param}) "
+            " but we do not have a corresponding understanding of this code in our enum"
+        )
+        return EDS_ERR_OK
 
     waiting[property].set()
     for listener in listeners[property]:
         listener(results.get(property))
-
-    return EDS_ERR_OK
-
-
-def _state_callback(event, param, context):
-    """Handle state events (like AF results)."""
-    global state_waiting
-    print(f"Got state event: {hex(event)} (param: {param})")
-
-    if event in state_waiting:
-        state_waiting[event].set()
 
     return EDS_ERR_OK
 

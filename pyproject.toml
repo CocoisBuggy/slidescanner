@@ -92,6 +92,7 @@ ignore = ["E402"]
 [tool.pyright]
 # pyright config
 reportMissingModuleSource = "none"
+reportRedeclaration = "none"
 
 
 [tool.pytest.ini_options]

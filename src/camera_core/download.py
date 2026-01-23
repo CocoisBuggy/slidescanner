@@ -1,0 +1,220 @@
+import ctypes
+import datetime
+import os
+from threading import Event
+
+from src.exif_utils import add_metadata_to_image
+from src.picture import PENDING_CASSETTE, CassetteItem
+from src.settings import Settings
+
+from . import (
+    EDS_ERR_OK,
+    CameraException,
+    EdsDirectoryItemInfo,
+    edsdk,
+    kEdsObjectEvent_DirItemRequestTransfer,
+)
+from .object_events import EdsObjectEventEnum
+from .sdk import EdsBaseRef, EdsStreamRef, EdsUInt64
+
+# Global references for callbacks
+queued_photo_request: CassetteItem | None = None
+last_downloaded_photo: tuple[CassetteItem, str] | None = None
+downloaded_image_available = Event()
+format_to_extension = {
+    0x00000000: ".jpg",  # kEdsImageType_Unknown
+    0x00000001: ".jpg",  # kEdsImageType_Jpeg
+    0x00000002: ".crw",  # kEdsImageType_CRW
+    0x00000004: ".raw",  # kEdsImageType_RAW
+    0x00000006: ".cr2",  # kEdsImageType_CR2
+    0x00000008: ".heif",  # kEdsImageType_HEIF
+    0xB108: ".cr3",  # kEdsObjectFormat_CR3
+}
+object_event = {e: Event() for e in EdsObjectEventEnum}
+
+
+def set_next_photo_request(item: CassetteItem):
+    global queued_photo_request
+
+    if queued_photo_request is not None:
+        raise Exception(
+            "We cannot queue a next photo request while one is already unfulfilled"
+        )
+
+    if queued_photo_request == PENDING_CASSETTE:
+        raise Exception("There's a pending casette item that isn't reified yet")
+
+    queued_photo_request = item
+    downloaded_image_available.clear()
+
+
+def clear_photo_request():
+    global queued_photo_request
+    queued_photo_request = None
+    downloaded_image_available.set()
+
+
+def get_current_photo_request() -> CassetteItem | None:
+    return queued_photo_request
+
+
+def download_image(directory_item: EdsBaseRef, photo_req: CassetteItem) -> str | None:
+    # First of all, grab the settings so we know where to save files
+    settings = Settings()
+
+    print("Downloading image...")
+    # Get directory item information
+    dir_item_info = EdsDirectoryItemInfo()
+    err = edsdk.EdsGetDirectoryItemInfo(
+        directory_item,
+        ctypes.byref(dir_item_info),
+    )
+
+    if err != EDS_ERR_OK:
+        raise CameraException(err)
+
+    print(
+        f"Downloading file: {dir_item_info.szFileName.decode('utf-8')}, "
+        f"size: {dir_item_info.size}, format: {dir_item_info.format}"
+    )
+
+    # Get appropriate extension, default to .jpg
+    extension = format_to_extension.get(dir_item_info.format, ".jpg")
+
+    print(
+        f"Detected format: 0x{dir_item_info.format:08X}, using extension: {extension}"
+    )
+
+    # Create output directory if it doesn't exist
+    outdir = os.path.join(settings.photo_location, (photo_req.name or "default"))
+
+    os.makedirs(
+        outdir,
+        exist_ok=True,
+    )
+
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{photo_req.name}_{timestamp}{extension}"
+
+    filepath = os.path.join(
+        outdir,
+        filename,
+    )
+
+    print(f"Target filepath: {filepath}")
+    # Download to memory stream first, then copy to file
+    print("Creating memory stream for download...")
+    mem_stream = EdsStreamRef()
+    err = edsdk.EdsCreateMemoryStream(EdsUInt64(0), ctypes.byref(mem_stream))
+    if err != EDS_ERR_OK:
+        print(f"Failed to create memory stream: {err}")
+        raise CameraException(err)
+
+    try:
+        print("Downloading to memory stream...")
+        # Download the image to memory
+        err = edsdk.EdsDownload(directory_item, dir_item_info.size, mem_stream)
+        if err != EDS_ERR_OK:
+            print(f"EdsDownload to memory failed: {err}")
+            raise CameraException(err)
+
+        print("Download to memory completed, calling EdsDownloadComplete...")
+        # Complete the download
+        err = edsdk.EdsDownloadComplete(directory_item)
+        if err != EDS_ERR_OK:
+            print(f"EdsDownloadComplete failed: {err}")
+            raise CameraException(err)
+
+        # Get the data from memory stream
+        pointer = ctypes.c_void_p()
+        length = EdsUInt64()
+        edsdk.EdsGetPointer(mem_stream, ctypes.byref(pointer))
+        edsdk.EdsGetLength(mem_stream, ctypes.byref(length))
+
+        print(f"Downloaded data size: {length.value} bytes")
+
+        # Extract the data
+        data = ctypes.string_at(pointer, length.value)
+
+        # For CR3 files, write first then add metadata using exiftool
+        if dir_item_info.format in [0xB108, 0x0000B108]:
+            # Write to file first
+            print(f"Writing {len(data)} bytes to file: {filepath}")
+            with open(filepath, "wb") as f:
+                f.write(data)
+
+            # Add metadata using exiftool after file is written
+            print("Adding metadata to image...")
+            try:
+                add_metadata_to_image(data, photo_req, dir_item_info.format, filepath)
+                print("Metadata added successfully")
+            except Exception as e:
+                print(f"Warning: Failed to add metadata: {e}")
+
+            data_with_metadata = data
+        else:
+            # For other formats, add metadata then write
+            print("Adding metadata to image...")
+            try:
+                data_with_metadata = add_metadata_to_image(
+                    data, photo_req, dir_item_info.format, filepath
+                )
+                print("Metadata added successfully")
+            except Exception as e:
+                print(f"Warning: Failed to add metadata: {e}")
+                data_with_metadata = data
+
+            # Write to file manually
+            print(f"Writing {len(data_with_metadata)} bytes to file: {filepath}")
+            with open(filepath, "wb") as f:
+                f.write(data_with_metadata)
+
+        # Check if file was actually written
+        if os.path.exists(filepath):
+            file_size = os.path.getsize(filepath)
+            print(f"File created: {filepath}, size: {file_size} bytes")
+            if file_size == 0:
+                print("WARNING: File is still 0 bytes!")
+            else:
+                print(f"SUCCESS: File has {file_size} bytes")
+        else:
+            print(f"ERROR: File was not created: {filepath}")
+
+        print(f"Image downloaded successfully: {filename}")
+
+        return filename
+    finally:
+        edsdk.EdsRelease(mem_stream)
+
+
+# Object event callback (for image capture events)
+def _object_callback(event, object_ref, context):
+    global queued_photo_request, last_downloaded_photo, object_event
+    enum = EdsObjectEventEnum(event)
+
+    print(f"Got object event from camera: {enum} {event}, {object_ref}")
+    object_event[enum].set()
+
+    if event == kEdsObjectEvent_DirItemRequestTransfer:
+        print("Camera requesting image transfer!")
+
+        try:
+            # Download the image
+            req = get_current_photo_request()
+            if req is None:
+                raise Exception("No queued request")
+
+            filename = download_image(object_ref, req)
+            if not filename:
+                raise Exception("Filename was none-ish")
+
+            downloaded_image_available.set()
+            last_downloaded_photo = (req, filename)
+
+            print(f"Successfully downloaded image: {filename}")
+        except Exception as e:
+            print(f"Failed to download image: {e}")
+
+        clear_photo_request()
+
+    return EDS_ERR_OK

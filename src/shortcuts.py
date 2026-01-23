@@ -28,40 +28,18 @@ class ShortcutsHandler:
             "n": self.next_cassette,  # Ctrl+N
         }
 
-        # Numpad shortcuts for quality rating (these will be handled separately)
-        self.numpad_shortcuts = {
-            "KP_1": 1,
-            "KP_2": 2,
-            "KP_3": 3,
-            "KP_4": 4,
-            "KP_5": 5,
-            "1": 1,
-            "2": 2,
-            "3": 3,
-            "4": 4,
-            "5": 5,  # Regular number keys as fallback
-        }
-
     def on_key_pressed(self, controller, keyval, keycode, state):
         """Handle key press events for shortcuts."""
         # Check if Ctrl is pressed
         if state & Gdk.ModifierType.CONTROL_MASK:
             # Convert keyval to key name
-            key_name = Gdk.keyval_name(keyval).lower()
+            key_name = (Gdk.keyval_name(keyval) or "").lower()
             if key_name in self.shortcuts:
                 self.shortcuts[key_name]()
-                return True  # Event handled
-        else:
-            # Check for numpad shortcuts (no modifier required)
-            key_name = Gdk.keyval_name(keyval)
-            if key_name in self.numpad_shortcuts:
-                rating = self.numpad_shortcuts[key_name]
-                self.set_quality_rating(rating)
                 return True  # Event handled
         return False  # Event not handled
 
     def capture_image(self):
-        """Handle Ctrl+C: Capture image."""
         print("Capture image shortcut triggered")
 
         # Take the picture

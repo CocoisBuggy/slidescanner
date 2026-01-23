@@ -91,7 +91,6 @@ class StabilityGraph(GraphWidget):
 
         # Create the line plot
         self.lines = [self.ax.plot([], [], alpha=0.6)[0] for x in range(7)]
-        print(self.lines)
 
         # Initialize empty plot
         self.update_plot()

@@ -5,6 +5,10 @@ from gi.repository import Gtk, GLib, Pango
 
 
 class Settings:
+    cache_dir: Path
+    config_file: Path
+    photo_location: str
+
     def __init__(self):
         self.cache_dir = Path.home() / ".cache" / "slidescanner"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -19,7 +23,10 @@ class Settings:
                 self.photo_location = data.get("photo_location", self.photo_location)
 
     def save(self):
-        data = {"photo_location": self.photo_location}
+        data = {
+            "photo_location": self.photo_location,
+        }
+
         with open(self.config_file, "w") as f:
             json.dump(data, f, indent=4)
 
