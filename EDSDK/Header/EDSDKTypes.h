@@ -63,7 +63,7 @@
 #ifdef __cplusplus
 #define NULL 0
 #else
-#define NULL ((void*)0)
+#define NULL ((void *)0)
 #endif
 #endif
 
@@ -151,7 +151,7 @@ typedef EdsUInt32 EdsError;
 /*-----------------------------------------------------------------------------
  Reference Types
 -----------------------------------------------------------------------------*/
-typedef struct __EdsObject* EdsBaseRef;
+typedef struct __EdsObject *EdsBaseRef;
 
 typedef EdsBaseRef EdsCameraListRef;
 typedef EdsBaseRef EdsCameraRef;
@@ -1511,63 +1511,60 @@ typedef struct tagEdsMovieFileNoSet {
 /*-----------------------------------------------------------------------------
  EdsProgressCallback
 -----------------------------------------------------------------------------*/
-typedef EdsError(EDSCALLBACK* EdsProgressCallback)(EdsUInt32 inPercent,
-                                                   EdsVoid* inContext,
-                                                   EdsBool* outCancel);
+typedef EdsError(EDSCALLBACK *EdsProgressCallback)(EdsUInt32 inPercent,
+                                                   EdsVoid *inContext,
+                                                   EdsBool *outCancel);
 
 /*-----------------------------------------------------------------------------
  EdsCameraAddedHandler
 -----------------------------------------------------------------------------*/
-typedef EdsError(EDSCALLBACK* EdsCameraAddedHandler)(EdsVoid* inContext);
+typedef EdsError(EDSCALLBACK *EdsCameraAddedHandler)(EdsVoid *inContext);
 
 /*-----------------------------------------------------------------------------
  EdsPropertyEventHandler
 -----------------------------------------------------------------------------*/
-typedef EdsError(EDSCALLBACK* EdsPropertyEventHandler)(
-    EdsPropertyEvent inEvent,
-    EdsPropertyID inPropertyID,
-    EdsUInt32 inParam,
-    EdsVoid* inContext);
+typedef EdsError(EDSCALLBACK *EdsPropertyEventHandler)(
+    EdsPropertyEvent inEvent, EdsPropertyID inPropertyID, EdsUInt32 inParam,
+    EdsVoid *inContext);
 
 /*-----------------------------------------------------------------------------
  EdsObjectEventHandler
 -----------------------------------------------------------------------------*/
-typedef EdsError(EDSCALLBACK* EdsObjectEventHandler)(EdsObjectEvent inEvent,
+typedef EdsError(EDSCALLBACK *EdsObjectEventHandler)(EdsObjectEvent inEvent,
                                                      EdsBaseRef inRef,
-                                                     EdsVoid* inContext);
+                                                     EdsVoid *inContext);
 
 /*-----------------------------------------------------------------------------
  EdsStateEventHandler
 -----------------------------------------------------------------------------*/
-typedef EdsError(EDSCALLBACK* EdsStateEventHandler)(EdsStateEvent inEvent,
+typedef EdsError(EDSCALLBACK *EdsStateEventHandler)(EdsStateEvent inEvent,
                                                     EdsUInt32 inEventData,
-                                                    EdsVoid* inContext);
+                                                    EdsVoid *inContext);
 
 /*----------------------------------------------------------------------------*/
-typedef EdsError EDSSTDCALL EdsReadStream(void* inContext,
-                                          EdsUInt32 inReadSize,
-                                          EdsVoid* outBuffer,
-                                          EdsUInt32* outReadSize);
-typedef EdsError EDSSTDCALL EdsWriteStream(void* inContext,
+typedef EdsError EDSSTDCALL EdsReadStream(void *inContext, EdsUInt32 inReadSize,
+                                          EdsVoid *outBuffer,
+                                          EdsUInt32 *outReadSize);
+typedef EdsError EDSSTDCALL EdsWriteStream(void *inContext,
                                            EdsUInt32 inWriteSize,
-                                           const EdsVoid* inBuffer,
-                                           EdsUInt32* outWrittenSize);
-typedef EdsError EDSSTDCALL EdsSeekStream(void* inContext,
+                                           const EdsVoid *inBuffer,
+                                           EdsUInt32 *outWrittenSize);
+typedef EdsError EDSSTDCALL EdsSeekStream(void *inContext,
                                           EdsInt32 inSeekOffset,
                                           EdsSeekOrigin inSeekOrigin);
-typedef EdsError EDSSTDCALL EdsTellStream(void* inContext,
-                                          EdsInt32* outPosition);
-typedef EdsError EDSSTDCALL EdsGetStreamLength(void* inContext,
-                                               EdsUInt32* outLength);
+typedef EdsError EDSSTDCALL EdsTellStream(void *inContext,
+                                          EdsInt32 *outPosition);
+typedef EdsError EDSSTDCALL EdsGetStreamLength(void *inContext,
+                                               EdsUInt32 *outLength);
 
 typedef struct {
-  void* context;
+  void *context;
 
-  EdsReadStream* read;
-  EdsWriteStream* write;
-  EdsSeekStream* seek;
-  EdsTellStream* tell;
-  EdsGetStreamLength* getLength;
+  EdsReadStream *read;
+  EdsWriteStream *write;
+  EdsSeekStream *seek;
+  EdsTellStream *tell;
+  EdsGetStreamLength *getLength;
 } EdsIStream;
 
 #ifdef __MACOS__

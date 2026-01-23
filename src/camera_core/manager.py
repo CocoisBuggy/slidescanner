@@ -1,8 +1,10 @@
 import ctypes
 from threading import Event
+from typing import Any, Callable, Protocol
 
 from gi.repository import GObject
 
+from src.picture import CassetteItem
 from src.common_signal import SignalName
 
 from . import (
@@ -38,13 +40,23 @@ def needs_sdk(inner):
     return wrapper
 
 
+class SignalWithCassette(Protocol):
+    cassette: CassetteItem
+
+    def emit(self, signal_name: str | GObject.Signal, *args: Any) -> Any: ...
+
+    def connect(
+        self, detailed_signal: str | GObject.Signal, handler: Callable
+    ) -> Any: ...
+
+
 class CameraManager:
     initialized: Event
     opening: Event
     camera_list: EdsCameraListRef | None
-    signal: GObject.GObject
+    signal: SignalWithCassette
 
-    def __init__(self, signal: GObject.GObject):
+    def __init__(self, signal: SignalWithCassette):
         self.camera_list = None
         self.initialized = Event()
         self.opening = Event()
@@ -213,7 +225,7 @@ class CameraManager:
             camera,
             kEdsStateEvent_All,
             _state_handler,
-            ctypes.py_object(self),
+            ctypes.c_void_p(0),
         )
 
         if err != EDS_ERR_OK:

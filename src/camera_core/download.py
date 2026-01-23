@@ -94,7 +94,7 @@ def download_image(directory_item: EdsBaseRef, photo_req: CassetteItem) -> str |
     )
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{photo_req.name}_{timestamp}{extension}"
+    filename = f"{timestamp}{extension}"
 
     filepath = os.path.join(
         outdir,
@@ -179,8 +179,6 @@ def download_image(directory_item: EdsBaseRef, photo_req: CassetteItem) -> str |
                 print(f"SUCCESS: File has {file_size} bytes")
         else:
             print(f"ERROR: File was not created: {filepath}")
-
-        print(f"Image downloaded successfully: {filename}")
 
         return filename
     finally:

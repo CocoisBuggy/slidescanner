@@ -2,12 +2,10 @@ import gi
 
 from src.constants import INNER_PADDING
 
-
 gi.require_version("Gtk", "4.0")
 
 from gi.repository import Gtk
 
-from src.camera_core.properties import battery_level_to_percentage
 from src.shared_state import SharedState
 from src.shortcuts import ShortcutsHandler
 
@@ -46,7 +44,7 @@ def create_toolbar(state: SharedState, shortcuts_handler: ShortcutsHandler):
     toolbar.append(battery_label)
     state.connect(
         "notify::battery_level",
-        lambda obj, pspec: battery_label.set_text(obj.battery_level),
+        lambda obj, pspec: battery_label.set_text(f"Battery: {obj.battery_level}%"),
     )
 
     return toolbar

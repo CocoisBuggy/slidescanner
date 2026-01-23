@@ -1,5 +1,6 @@
 import gi
 
+
 gi.require_version("Gtk", "4.0")
 
 from threading import Thread
@@ -7,20 +8,19 @@ from threading import Thread
 from gi.repository import Gdk, Gtk
 
 from .picture import CassetteItem
+from .shared_state import SharedState
+from .common_signal import SignalName
 
 
 class ShortcutsHandler:
-    def __init__(self, window):
+    def __init__(self, window: Gtk.ApplicationWindow, state: SharedState):
+        self.state = state
         self.window = window
 
-    def setup_shortcuts(self):
-        """Set up keyboard shortcuts for ctrl+key combinations."""
+        self.key_controller = Gtk.EventControllerKey()
+        window.add_controller(self.key_controller)
         # Connect key press event
-        key_controller = Gtk.EventControllerKey()
-        key_controller.connect("key-pressed", self.on_key_pressed)
-        self.window.add_controller(key_controller)
-
-        # Define shortcut mappings (key -> function)
+        self.key_controller.connect("key-pressed", self.on_key_pressed)
         self.shortcuts = {
             "space": self.capture_image,  # Ctrl+Space
             "s": self.open_settings,  # Ctrl+S
@@ -41,64 +41,7 @@ class ShortcutsHandler:
 
     def capture_image(self):
         print("Capture image shortcut triggered")
-
-        # Take the picture
-        try:
-            # Parse slide date first (overrides cassette date)
-            slide_date = None
-            if self.window.shared_state.slide_date.strip():
-                from .date_utils import parse_fuzzy_date
-
-                parsed_date, error = parse_fuzzy_date(
-                    self.window.shared_state.slide_date.strip()
-                )
-                if parsed_date:
-                    slide_date = parsed_date
-                else:
-                    print(
-                        f"Warning: Could not parse slide date '{self.window.shared_state.slide_date}': {error}"
-                    )
-                    slide_date = None
-
-            # Parse cassette_date string using fuzzy date parsing (only if no slide date)
-            cassette_date = None
-            if not slide_date and self.window.shared_state.cassette_date.strip():
-                from .date_utils import parse_fuzzy_date
-
-                parsed_date, error = parse_fuzzy_date(
-                    self.window.shared_state.cassette_date.strip()
-                )
-                if parsed_date:
-                    cassette_date = parsed_date
-                else:
-                    print(
-                        f"Warning: Could not parse date '{self.window.shared_state.cassette_date}': {error}"
-                    )
-                    cassette_date = None
-
-            # Use slide date if available, otherwise cassette date
-            final_date = slide_date if slide_date else cassette_date
-
-            def take(item):
-                self.window.shared_state.camera_manager.focus()
-                self.window.shared_state.camera_manager.take_picture(item)
-
-            Thread(
-                target=take,
-                args=(
-                    CassetteItem(
-                        name=self.window.shared_state.cassette_name,
-                        label=self.window.shared_state.slide_label,
-                        stars=self.window.shared_state.quality_rating,
-                        date=final_date,
-                    ),
-                ),
-                daemon=True,
-            ).start()
-
-        except Exception as e:
-            print(f"Failed to capture image: {e}")
-            # TODO: Show error dialog to user
+        self.state.emit(SignalName.TakePicture.name)
 
     def open_settings(self):
         """Handle Ctrl+S: Open settings."""
@@ -115,12 +58,7 @@ class ShortcutsHandler:
     def next_cassette(self):
         """Handle Ctrl+N: Move to next cassette."""
         print("Next cassette shortcut triggered")
-        self.window.shared_state.next_cassette()
-
-    def set_quality_rating(self, rating):
-        """Set quality rating (1-5 stars)."""
-        print(f"Setting quality rating to {rating} stars")
-        self.window.shared_state.set_quality_rating(rating)
+        self.state.next_cassette()
 
     def show_shortcuts_dialog(self):
         """Display a dialog showing all available keyboard shortcuts."""

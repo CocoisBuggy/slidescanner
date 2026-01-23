@@ -23,7 +23,7 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         self.live_view_running = False
 
         # Initialize handlers
-        self.shortcuts_handler = ShortcutsHandler(self)
+        self.shortcuts_handler = ShortcutsHandler(self, shared_state)
 
         self.set_titlebar(create_header_bar())
         self.set_child(MainContent(shared_state, self.shortcuts_handler))
@@ -31,7 +31,6 @@ class SlideScannerWindow(Gtk.ApplicationWindow):
         # Set up CSS styling for error labels
         self._setup_css()
         # Set up keyboard shortcuts
-        self.shortcuts_handler.setup_shortcuts()
 
     def _setup_css(self):
         """Set up CSS styling for the application."""

@@ -1,8 +1,9 @@
 import ctypes
-import time
-from threading import Event
+import traceback
+from threading import Event, Lock, Thread
 
 
+from src.camera_core.object_events import EdsObjectEventEnum
 from src.common_signal import SignalName
 from src.picture import CassetteItem
 
@@ -16,6 +17,7 @@ from .camera_core import (
     EdsStreamRef,
     EdsUInt32,
     EdsUInt64,
+    download,
     edsdk,
     kEdsCameraCommand_PressShutterButton,
     kEdsCameraCommand_ShutterButton_Completely_NonAF,
@@ -32,6 +34,7 @@ class Camera:
     ref: EdsCameraRef
     connected: Event
     details: EdsDeviceInfo
+    picture_lock: Lock
 
     def __init__(
         self,
@@ -42,6 +45,13 @@ class Camera:
         self.ref = ref
         self.connected = Event()
         self.details = self.get_device_info()
+        self.picture_lock = Lock()
+        self.object_event = download.object_event
+
+        self.manager.signal.connect(
+            SignalName.TakePicture.name,
+            self.take_picture_sequence,
+        )
 
     def close(self):
         edsdk.EdsCloseSession(self.ref)
@@ -134,13 +144,30 @@ class Camera:
 
         return data
 
+    def emit(self, sig: SignalName):
+        self.manager.signal.emit(sig.name)
+
+    def take_picture_sequence(self, _):
+        def inner():
+            with self.picture_lock:
+                try:
+                    self.focus()
+                    self.take_picture(self.manager.signal.cassette)
+                except Exception as e:
+                    traceback.print_exception(e)
+                    self.emit(SignalName.TakePictureError)
+
+                print("Done with picture taking sequence!")
+
+        Thread(target=inner).start()
+
     def focus(self):
         """Perform auto-focus using the same approach as the Canon sample code."""
 
         print("Starting auto-focus...")
-
-        # Use half-press shutter (same as sample code)
         print("Sending half-press shutter command...")
+        self.emit(SignalName.Focusing)
+
         err = edsdk.EdsSendCommand(
             self.ref,
             kEdsCameraCommand_PressShutterButton,
@@ -148,36 +175,31 @@ class Camera:
         )
 
         if err != EDS_ERR_OK:
-            print(f"Half-press failed: {err}")
             raise CameraException(f"Failed to start auto-focus: {err}")
 
         print("Half-press command sent successfully")
-
-        # Based on sample code analysis, focus command appears to be synchronous
-        # Wait a brief moment for focus to complete, similar to how cameras work
-        print("Waiting for focus to complete...")
-        time.sleep(0.5)  # Allow time for AF to complete
-
         # Release the shutter button to end focus operation
-        try:
-            edsdk.EdsSendCommand(
-                self.ref,
-                kEdsCameraCommand_PressShutterButton,
-                kEdsCameraCommand_ShutterButton_OFF,
-            )
-            print("Shutter button released")
-        except Exception as e:
-            print(f"Warning: Failed to release shutter button: {e}")
+        err = edsdk.EdsSendCommand(
+            self.ref,
+            kEdsCameraCommand_PressShutterButton,
+            kEdsCameraCommand_ShutterButton_OFF,
+        )
+
+        if err != EDS_ERR_OK:
+            raise CameraException(err)
 
         print("Auto-focus completed")
+        self.emit(SignalName.FocusDone)
         return True
 
     def take_picture(self, req: CassetteItem):
         """Take a picture using the camera."""
         print("Taking picture...")
         set_next_photo_request(req)
+        self.object_event[EdsObjectEventEnum.DirItemRequestTransfer].clear()
 
         # Use PressShutter instead of TakePicture command for better compatibility
+        self.emit(SignalName.ShutterDown)
         err = edsdk.EdsSendCommand(
             self.ref,
             kEdsCameraCommand_PressShutterButton,
@@ -202,5 +224,8 @@ class Camera:
         if err != EDS_ERR_OK:
             raise CameraException(err)
 
-        print("Picture taken successfully")
-        return True
+        self.emit(SignalName.ShutterRelease)
+        self.object_event[EdsObjectEventEnum.DirItemRequestTransfer].wait()
+        self.emit(SignalName.ImageDownloading)
+        download.downloaded_image_available.wait()
+        self.emit(SignalName.ImageDownloaded)

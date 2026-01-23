@@ -46,6 +46,7 @@ EdsPropertyEvent = EdsUInt32
 EdsDataType = EdsUInt32
 
 # Property events
+kEdsPropertyEvent_All = EdsPropertyEvent(0x00000101)
 kEdsPropertyEvent_PropertyChanged = EdsPropertyEvent(0x00000101)
 
 
