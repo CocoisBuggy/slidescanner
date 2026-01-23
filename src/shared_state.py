@@ -102,3 +102,9 @@ class SharedState(GObject.GObject):
 
         self.camera = Camera(self.camera_manager, cam)
         Thread(target=self.camera_manager.open_session, args=(cam,)).start()
+
+    def next_cassette(self):
+        self.cassette.name = ""
+        self.cassette.label = ""
+        self.cassette.date_backing = ""
+        self.cassette.slide_date_backing = ""
