@@ -36,7 +36,7 @@ class MainContent(Gtk.Box):
             self.camera_info_label.set_label("No camera connected")
             return
 
-        self.camera_info_label = cam.details.szDeviceDescription.decode()
+        self.camera_info_label.set_label(cam.details.szDeviceDescription.decode())
 
     def create_content_area(self):
         content_area = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
