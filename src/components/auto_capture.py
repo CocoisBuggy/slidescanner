@@ -1,6 +1,6 @@
 from gi.repository import GObject, Gtk
 
-from src.graphs import GraphManager
+from src.graphs import StabilityGraph
 from src.shared_state import SharedState
 from src.constants import INNER_PADDING
 
@@ -33,11 +33,11 @@ class AutoCapture(Gtk.Frame):
 
         self.auto_capture_switch = Gtk.Switch()
         self.auto_capture_switch.set_valign(Gtk.Align.CENTER)
-        self.auto_capture_switch.set_active(state.auto_capture)
+        self.auto_capture_switch.set_active(state.auto_capture_manager.enabled)
 
         # Bi-directional binding
-        state.bind_property(
-            "auto_capture",
+        state.auto_capture_manager.bind_property(
+            "enabled",
             self.auto_capture_switch,
             "active",
             GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE,
@@ -54,12 +54,12 @@ class AutoCapture(Gtk.Frame):
 
         # Stability graph
 
-        self.graph_manager = GraphManager()
-        self.stability_graph = self.graph_manager.create_stability_graph(
-            "stability",
+        self.stability_graph = StabilityGraph(
+            state.auto_capture_manager,
             width=380,
             height=140,
         )
+
         self.stability_graph.set_margin_top(8)
         self.stability_graph.set_margin_bottom(4)
         auto_capture_box.append(self.stability_graph)

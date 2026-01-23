@@ -1,22 +1,24 @@
 import contextlib
+from gi.repository import GObject
 import numpy as np
 import cv2
 
 
-class AutoCaptureManager:
+class AutoCaptureManager(GObject.GObject):
     """Manages auto-capture functionality with image stability detection."""
+
+    _enabled: bool = False  # Auto capture toggle state
 
     stability_threshold: float
     stability_duration: int
     prior_frames: list = []
     total_frames_processed = 0
-    stability_history = []
+    _stability_history: list[list[float]] = []
     last_captured_image: bytes | None = None
     stability_duration: int = 12
 
     def __init__(
         self,
-        window,
         stability_threshold: float = 0.95,
     ):
         """
@@ -27,8 +29,24 @@ class AutoCaptureManager:
             stability_threshold: Correlation threshold (0-1) for considering images stable
             stability_duration: Duration in seconds that image must remain stable
         """
-        self.window = window
+        super().__init__()
         self.stability_threshold = stability_threshold
+
+    @GObject.Property(type=bool, default=False)
+    def enabled(self):
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, val):
+        self._enabled = val
+
+    @GObject.Property(type=GObject.TYPE_PYOBJECT)
+    def stability_history(self) -> list[list[float]]:
+        return self._stability_history
+
+    @stability_history.setter
+    def stability_history(self, val):
+        self._stability_history = val
 
     @contextlib.contextmanager
     def frame_context(self, frame_data: bytes):
@@ -115,14 +133,7 @@ class AutoCaptureManager:
         if np.isnan(correlation):
             correlation = 1.0 if np.array_equal(img1, img2) else 0.0
 
-        similarity = max(0.0, correlation)  # Ensure non-negative
-
-        # Store stability for graph (keep only recent history)
-        self.stability_history.append(similarity)
-        if len(self.stability_history) > 100:
-            self.stability_history.pop(0)
-
-        return similarity
+        return max(0.0, correlation)  # Ensure non-negative
 
     def _frame_data_to_array(self, frame_data: bytes) -> np.ndarray:
         """Convert frame data to numpy array for correlation analysis."""
@@ -142,8 +153,7 @@ class AutoCaptureManager:
             for prior in self.prior_frames
         ]
 
-        similarity = np.average(previous_similarities)
-        self.stability_history = (
+        self._stability_history.append(
             list(
                 [
                     0
@@ -155,4 +165,10 @@ class AutoCaptureManager:
             + previous_similarities
         )
 
+        # If our history rolls over 100 we can drop the first element
+        if len(self._stability_history) > 50:
+            self._stability_history.pop(0)
+
+        similarity = np.average(previous_similarities)
+        self.notify("stability-history")
         return bool(similarity >= self.stability_threshold)

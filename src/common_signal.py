@@ -10,3 +10,11 @@ class SignalName(Enum):
     LiveViewStarting = auto()
     LiveViewRunning = auto()
     LiveViewStopping = auto()
+
+    TakePicture = auto()
+    Focusing = auto()
+    FocusDone = auto()
+    ShutterDown = auto()
+    ShutterRelease = auto()
+    ImageDownloading = auto()
+    ImageDownloaded = auto()

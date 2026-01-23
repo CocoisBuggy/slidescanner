@@ -3,20 +3,17 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 
-from typing import Optional
-
-import time
-
-from matplotlib.lines import Line2D
-
-from .auto_capture import AutoCaptureManager
-
-from gi.repository import Gtk
 import matplotlib
 
 matplotlib.use("GTK4Agg")
+
+import numpy as np
+from gi.repository import Gtk
 from matplotlib.backends.backend_gtk4agg import FigureCanvasGTK4Agg as FigureCanvas
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
+
+from .auto_capture import AutoCaptureManager
 
 
 class GraphWidget(Gtk.Box):
@@ -72,11 +69,17 @@ class GraphWidget(Gtk.Box):
 class StabilityGraph(GraphWidget):
     """A graph widget for displaying stability over time."""
 
-    stability_data: list[list[float]] = []
     lines: list[Line2D] = []
+    auto_capture: AutoCaptureManager
 
-    def __init__(self, width: int = 400, height: int = 150):
+    def __init__(
+        self,
+        auto_capture: AutoCaptureManager,
+        width: int = 400,
+        height: int = 150,
+    ):
         super().__init__(width, height)
+        self.auto_capture = auto_capture
 
         # Configure the plot for stability data with smaller fonts and padding
         self.ax.set_xlabel("Time (seconds)", fontsize=8, color="#cccccc")
@@ -90,80 +93,47 @@ class StabilityGraph(GraphWidget):
         )
 
         # Create the line plot
-        self.lines = [self.ax.plot([], [], alpha=0.6)[0] for x in range(7)]
+        self.lines = [
+            self.ax.plot([], [], alpha=0.5)[0]
+            for _ in range(self.auto_capture.stability_duration)
+        ]
+
+        (self.avg,) = self.ax.plot([], [])
 
         # Initialize empty plot
         self.update_plot()
+        self.auto_capture.connect("notify::stability-history", self.update_data)
 
-    def add_data(self, stability: list[float]):
+    def update_data(self, *_):
         """Add a new stability data point."""
-        if len(stability) != AutoCaptureManager.stability_duration:
-            print("INVALID data got added")
+        stability = self.auto_capture.stability_history
+        if not stability:
             return
 
-        self.stability_data.append(stability)
-
-        if len(self.stability_data) > self.max_points:
-            self.stability_data.pop(0)
+        if len(stability[-1]) != self.auto_capture.stability_duration:
+            print("INVALID data got added")
+            return
 
         self.update_plot()
 
     def update_plot(self):
         """Update the plot with current data."""
         # Update line data
+        stability_data = self.auto_capture.stability_history
+
         for series, line in enumerate(self.lines):
             line.set_data(
-                list(range(len(self.stability_data))),
-                list([x[series] for x in self.stability_data]),
+                list(range(len(stability_data))),
+                list([x[series] for x in stability_data]),
             )
 
+        self.avg.set_data(
+            list(range(len(stability_data))),
+            list([np.mean(x) for x in stability_data]),
+        )
         # Auto-scale y-axis to ensure line is visible
         self.ax.relim()
         self.ax.autoscale_view()
 
         # Redraw canvas
         self.canvas.draw_idle()
-
-    def reset(self):
-        """Reset the graph data."""
-        self.time_data.clear()
-        self.stability_data.clear()
-        self.start_time = time.time()
-        self.update_plot()
-
-
-class GraphManager:
-    """Manager class for handling multiple graph widgets."""
-
-    def __init__(self):
-        self.graphs = {}
-
-    def create_stability_graph(
-        self, name: str, width: int = 400, height: int = 150
-    ) -> StabilityGraph:
-        """Create and register a stability graph."""
-        graph = StabilityGraph(width, height)
-        self.graphs[name] = graph
-        return graph
-
-    def get_graph(self, name: str) -> Optional[GraphWidget]:
-        """Get a registered graph by name."""
-        return self.graphs.get(name)
-
-    def update_graph(self, name: str, *args, **kwargs):
-        """Update a specific graph."""
-        graph = self.get_graph(name)
-        if graph and hasattr(graph, "add_data_point"):
-            graph.add_data_point(*args, **kwargs)
-
-    def reset_graph(self, name: str):
-        """Reset a specific graph."""
-        graph = self.get_graph(name)
-        if graph and hasattr(graph, "reset"):
-            graph.reset()
-
-    def reset_all_graphs(self):
-        """Reset all registered graphs."""
-        for graph in self.graphs.values():
-            if hasattr(graph, "reset"):
-                graph.reset()

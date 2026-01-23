@@ -59,13 +59,14 @@ class MainContent(Gtk.Box):
 
         # Create the actual content box inside the scrolled window
         left_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        left_panel.set_spacing(INNER_PADDING // 2)
         left_panel.set_vexpand(True)
         left_panel.set_margin_end(4)
+
         scrolled_window.set_child(left_panel)
 
         camera_info_frame = Gtk.Frame(label="Camera Info")
         camera_info_frame.set_margin_bottom(INNER_PADDING)
-        left_panel.append(camera_info_frame)
 
         self.camera_info_label.set_margin_top(INNER_PADDING)
         self.camera_info_label.set_margin_bottom(INNER_PADDING)
@@ -73,6 +74,7 @@ class MainContent(Gtk.Box):
         self.camera_info_label.set_margin_end(INNER_PADDING)
         camera_info_frame.set_child(self.camera_info_label)
 
+        left_panel.append(camera_info_frame)
         left_panel.append(CassetteInfo(self.state))
         left_panel.append(CameraControls(self.state))
         left_panel.append(AutoCapture(self.state))

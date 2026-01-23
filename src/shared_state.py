@@ -18,6 +18,7 @@ from .camera_core.err import CameraException
 from .picture import CassetteItem
 from .settings import Settings
 from .common_signal import SignalName
+from .auto_capture import AutoCaptureManager
 
 
 class SharedState(GObject.GObject):
@@ -28,8 +29,7 @@ class SharedState(GObject.GObject):
     _battery_level: int | None = None  # Battery level 0-100 or None
 
     cassette = CassetteItem()
-    slide_counter: int = 0  # Sequential counter for slides within cassette
-    _auto_capture: bool = False  # Auto capture toggle state
+    auto_capture_manager = AutoCaptureManager()
 
     __gsignals__ = {
         sig.name: (GObject.SignalFlags.RUN_FIRST, None, ()) for sig in SignalName
@@ -61,14 +61,6 @@ class SharedState(GObject.GObject):
                 self._camera.close()
 
         self._camera = cam
-
-    @GObject.Property(type=bool, default=False)
-    def auto_capture(self):
-        return self._auto_capture
-
-    @auto_capture.setter
-    def auto_capture(self, val):
-        self._auto_capture = val
 
     def on_camera_connected(self, *_):
         print("A camera has connected to us!")

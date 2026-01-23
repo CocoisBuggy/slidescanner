@@ -10,7 +10,6 @@ from threading import Thread
 
 from gi.repository import GdkPixbuf, GLib, Gtk
 
-from .auto_capture import AutoCaptureManager
 from .camera_core.download import get_current_photo_request, set_next_photo_request
 from .camera_core.err import CameraException, ErrorCode
 from .picture import PENDING_CASSETTE
@@ -20,7 +19,6 @@ from .common_signal import SignalName
 
 class LiveView(Gtk.Frame):
     state: SharedState
-    auto_capture_manager: AutoCaptureManager | None = None
     live_view_running = False
     live_view_thread: Thread | None = None
 
@@ -89,11 +87,11 @@ class LiveView(Gtk.Frame):
                 data = self.state.camera.download_evf_image()
 
                 # Process for auto-capture if enabled
-                if self.state.auto_capture and self.auto_capture_manager is not None:
-                    should_capture = self.auto_capture_manager.process_frame(data)
-                    # self.stability_graph.add_data(
-                    #     self.auto_capture_manager.stability_history
-                    # )
+                if (
+                    self.state.auto_capture_manager.enabled
+                    and self.state.auto_capture_manager is not None
+                ):
+                    should_capture = self.state.auto_capture_manager.process_frame(data)
 
                     if should_capture and get_current_photo_request() is None:
                         set_next_photo_request(PENDING_CASSETTE)
@@ -113,8 +111,7 @@ class LiveView(Gtk.Frame):
     def _trigger_auto_capture(self):
         """Trigger an automatic capture using the same logic as manual capture."""
         print("Auto-capture: Triggering automatic photo capture")
-        # self.shortcuts_handler.capture_image()
-        raise NotImplementedError
+        self.state.emit(SignalName.TakePicture.name)
 
     def update_live_view_image(self, data):
         try:

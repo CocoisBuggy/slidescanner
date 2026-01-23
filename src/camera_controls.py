@@ -1,8 +1,8 @@
-from gi.repository import Gtk, GLib
-
-from .shared_state import SharedState
+from gi.repository import GLib, Gtk
 
 from .camera_core.properties import EdsPropertyIDEnum, listeners
+from .constants import INNER_PADDING
+from .shared_state import SharedState
 
 
 class CameraControls(Gtk.Frame):
@@ -35,11 +35,13 @@ class CameraControls(Gtk.Frame):
 
     def create_controls_box(self):
         """Create the controls frame with ISO and shutter speed settings."""
-        controls_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        controls_box.set_margin_top(12)
-        controls_box.set_margin_bottom(12)
-        controls_box.set_margin_start(12)
-        controls_box.set_margin_end(12)
+        controls_box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL, spacing=INNER_PADDING
+        )
+        controls_box.set_margin_top(INNER_PADDING)
+        controls_box.set_margin_bottom(INNER_PADDING)
+        controls_box.set_margin_start(INNER_PADDING)
+        controls_box.set_margin_end(INNER_PADDING)
         self.set_child(controls_box)
 
         # ISO
