@@ -62,7 +62,7 @@ def download_image(directory_item: EdsBaseRef, photo_req: CassetteItem) -> str |
     # First of all, grab the settings so we know where to save files
     settings = Settings()
 
-    log.info("Downloading image...")
+    log.debug("Downloading image...")
     # Get directory item information
     dir_item_info = EdsDirectoryItemInfo()
     err = edsdk.EdsGetDirectoryItemInfo(
@@ -81,7 +81,7 @@ def download_image(directory_item: EdsBaseRef, photo_req: CassetteItem) -> str |
     # Get appropriate extension, default to .jpg
     extension = format_to_extension.get(dir_item_info.format, ".jpg")
 
-    log.info(
+    log.debug(
         f"Detected format: 0x{dir_item_info.format:08X}, using extension: {extension}"
     )
 
@@ -101,7 +101,7 @@ def download_image(directory_item: EdsBaseRef, photo_req: CassetteItem) -> str |
         filename,
     )
 
-    log.info(f"Target filepath: {filepath}")
+    log.debug(f"Target filepath: {filepath}")
     # Download to memory stream first, then copy to file
     log.debug("Creating memory stream for download...")
     mem_stream = EdsStreamRef()
@@ -159,7 +159,7 @@ def download_image(directory_item: EdsBaseRef, photo_req: CassetteItem) -> str |
                 data_with_metadata = add_metadata_to_image(
                     data, photo_req, dir_item_info.format, filepath
                 )
-                log.info("Metadata added successfully")
+                log.debug("Metadata added successfully")
             except Exception as e:
                 log.warning(f"Failed to add metadata: {e}")
                 data_with_metadata = data
@@ -176,7 +176,7 @@ def download_image(directory_item: EdsBaseRef, photo_req: CassetteItem) -> str |
             if file_size == 0:
                 log.warning("File is still 0 bytes!")
             else:
-                log.info(f"SUCCESS: File has {file_size} bytes")
+                log.debug(f"SUCCESS: File has {file_size} bytes")
         else:
             log.error(f"ERROR: File was not created: {filepath}")
 
@@ -194,7 +194,7 @@ def _object_callback(event, object_ref, context):
     object_event[enum].set()
 
     if event == kEdsObjectEvent_DirItemRequestTransfer:
-        log.info("Camera requesting image transfer!")
+        log.debug("Camera requesting image transfer!")
 
         try:
             # Download the image

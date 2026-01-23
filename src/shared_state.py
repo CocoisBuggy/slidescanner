@@ -30,6 +30,7 @@ class SharedState(GObject.GObject):
     _settings: Settings = Settings()
     _camera: Camera | None = None
     _battery_level: int | None = None  # Battery level 0-100 or None
+    _show_zebra: bool = True
 
     cassette = CassetteItem()
     auto_capture_manager = AutoCaptureManager()
@@ -64,6 +65,14 @@ class SharedState(GObject.GObject):
                 self._camera.close()
 
         self._camera = cam
+
+    @GObject.Property(type=bool, default=True)
+    def show_zebra(self):
+        return self._show_zebra
+
+    @show_zebra.setter
+    def show_zebra(self, val):
+        self._show_zebra = val
 
     def on_camera_connected(self, *_):
         log.info("A camera has connected to us!")

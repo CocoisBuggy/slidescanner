@@ -1,6 +1,5 @@
 import gi
 
-
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 
@@ -9,14 +8,16 @@ import time
 import traceback
 from threading import Thread
 
+import cv2
+import numpy as np
 from gi.repository import GdkPixbuf, GLib, Gtk
 
 log = logging.getLogger(__name__)
 
-from .camera_core.download import get_current_photo_request, set_next_photo_request
+from .camera_core.download import get_current_photo_request
 from .camera_core.err import CameraException, ErrorCode
-from .shared_state import SharedState
 from .common_signal import SignalName
+from .shared_state import SharedState
 
 
 class LiveView(Gtk.Frame):
@@ -120,12 +121,60 @@ class LiveView(Gtk.Frame):
             loader.write(data)
             loader.close()
             pixbuf = loader.get_pixbuf()
+
             if pixbuf:
+                # Highlight pure white pixels with red to show clipping
+                if self.state.show_zebra:
+                    pixbuf = self._highlight_clipped_pixels(pixbuf)
+
                 self.live_view_image.set_pixbuf(pixbuf)
             else:
                 log.warning("Pixbuf is None")
         except Exception as e:
+            log.exception(e)
             log.error(f"Failed to load image: {e}")
+
+    def _highlight_clipped_pixels(self, pixbuf: GdkPixbuf.Pixbuf):
+        """Create a new pixbuf with pure white pixels highlighted in red."""
+        # --- 1. PIXBUF TO NUMPY (OPENCV COMPATIBLE) ---
+
+        width = pixbuf.get_width()
+        height = pixbuf.get_height()
+        channels = pixbuf.get_n_channels()
+        rowstride = pixbuf.get_rowstride()
+
+        # Get pixels and create a mutable copy
+        raw_data = pixbuf.get_pixels()
+        # We use np.frombuffer + .copy() to solve the read-only error
+        arr = np.frombuffer(raw_data, dtype=np.uint8).copy()
+        # Reshape and handle rowstride (strips padding bytes if they exist)
+        arr = arr.reshape((height, rowstride))
+        img_rgb = arr[:, : width * channels].reshape((height, width, channels))
+
+        # Convert RGB (GDK) to BGR (OpenCV)
+        img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+
+        # Define "pure white" in BGR
+        # We can use cv2.inRange for speed if we ever want to do a "range" (e.g. 250-255)
+        lower_white = np.array([255, 255, 255])
+        upper_white = np.array([255, 255, 255])
+        mask = cv2.inRange(img_bgr, lower_white, upper_white)
+        img_bgr[mask > 0] = [0, 0, 255]
+
+        # Convert back to RGB for GTK
+        processed_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+        data_bytes = processed_rgb.tobytes()
+
+        return GdkPixbuf.Pixbuf.new_from_data(
+            data_bytes,  # type: ignore
+            GdkPixbuf.Colorspace.RGB,
+            pixbuf.get_has_alpha(),
+            8,
+            width,
+            height,
+            width * channels,  # New rowstride (no padding needed here)
+            destroy_fn=None,
+        )
 
     def on_auto_capture_disabled(self):
         """Called when auto-capture is disabled."""
