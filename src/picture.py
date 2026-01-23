@@ -60,6 +60,3 @@ class CassetteItem(GObject):
         self._slide_date_backing = value
         self._slide_date, err = parse_fuzzy_date(value)
         self._slide_date_err = err or ""
-
-
-PENDING_CASSETTE = CassetteItem()

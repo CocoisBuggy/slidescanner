@@ -12,7 +12,6 @@ from gi.repository import GdkPixbuf, GLib, Gtk
 
 from .camera_core.download import get_current_photo_request, set_next_photo_request
 from .camera_core.err import CameraException, ErrorCode
-from .picture import PENDING_CASSETTE
 from .shared_state import SharedState
 from .common_signal import SignalName
 
@@ -94,8 +93,7 @@ class LiveView(Gtk.Frame):
                     should_capture = self.state.auto_capture_manager.process_frame(data)
 
                     if should_capture and get_current_photo_request() is None:
-                        set_next_photo_request(PENDING_CASSETTE)
-                        self._trigger_auto_capture()
+                        self._trigger_capture()
 
                 GLib.idle_add(self.update_live_view_image, data)
             except CameraException as e:
@@ -108,7 +106,7 @@ class LiveView(Gtk.Frame):
                 time.sleep(1)
             time.sleep(0.1)
 
-    def _trigger_auto_capture(self):
+    def _trigger_capture(self):
         """Trigger an automatic capture using the same logic as manual capture."""
         print("Auto-capture: Triggering automatic photo capture")
         self.state.emit(SignalName.TakePicture.name)

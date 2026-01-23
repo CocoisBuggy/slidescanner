@@ -4,7 +4,7 @@ import os
 from threading import Event
 
 from src.exif_utils import add_metadata_to_image
-from src.picture import PENDING_CASSETTE, CassetteItem
+from src.picture import CassetteItem
 from src.settings import Settings
 
 from . import (
@@ -40,9 +40,6 @@ def set_next_photo_request(item: CassetteItem):
         raise Exception(
             "We cannot queue a next photo request while one is already unfulfilled"
         )
-
-    if queued_photo_request == PENDING_CASSETTE:
-        raise Exception("There's a pending casette item that isn't reified yet")
 
     queued_photo_request = item
     downloaded_image_available.clear()

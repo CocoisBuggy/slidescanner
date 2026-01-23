@@ -1,12 +1,12 @@
 import io
 import subprocess
 from typing import Optional
-from .picture import CassetteItem
 
+import piexif
 from PIL import Image
 from PIL.ExifTags import TAGS
 
-import piexif
+from .picture import CassetteItem
 
 
 def add_metadata_to_image(
@@ -32,7 +32,6 @@ def add_metadata_to_image(
     print("METADATA TO ADD TO IMAGE:")
     print(f"  Date: {cassette_item.date}")
     print(f"  Label: {cassette_item.label}")
-    print(f"  Stars: {cassette_item.stars}")
     print(f"  Cassette: {cassette_item.name}")
     print(f"  Format: 0x{image_format:08X}" if image_format else "  Format: Unknown")
 
@@ -72,7 +71,9 @@ def add_metadata_to_image(
 
 
 def _update_cr3_metadata(
-    image_data: bytes, cassette_item: CassetteItem, filepath: str | None = None
+    image_data: bytes,
+    cassette_item: CassetteItem,
+    filepath: str | None = None,
 ) -> None:
     """Update CR3 metadata using exiftool subprocess."""
     print("Updating CR3 metadata using exiftool")
@@ -91,10 +92,11 @@ def _update_cr3_metadata(
 
     # Prepare metadata for exiftool
     date_str = (
-        cassette_item.date.strftime("%Y:%m:%d %H:%M:%S") if cassette_item.date else ""
+        (cassette_item.slide_date or cassette_item.date).strftime("%Y:%m:%d %H:%M:%S")
+        if cassette_item.date
+        else ""
     )
     description = cassette_item.label or ""
-    rating = cassette_item.stars or 0
     cassette = f"Cassette: {cassette_item.name}" if cassette_item.name else ""
 
     # Build exiftool command
@@ -106,7 +108,6 @@ def _update_cr3_metadata(
         f"-ModifyDate={date_str}",
         f"-Description={description}",
         f"-ImageDescription={description}",
-        f"-Rating={rating}",
         f"-Copyright={cassette}",
         "-XPSubject=Slide Scanner",
         filepath,
@@ -173,7 +174,6 @@ def _create_xmp_sidecar(
                     <rdf:li>{datetime_str}</rdf:li>
                 </rdf:Seq>
             </dc:date>
-            <xmp:Rating>{cassette_item.stars or 0}</xmp:Rating>
             <photoshop:Category>Slide Scanner</photoshop:Category>
             <photoshop:Credit>{cassette_item.name or ""}</photoshop:Credit>
         </rdf:Description>
@@ -273,19 +273,15 @@ def _add_embedded_metadata(
 
             if cassette_item.label:
                 if hasattr(piexif.ImageIFD, "ImageDescription"):
-                    exif_dict["0th"][
-                        piexif.ImageIFD.ImageDescription
-                    ] = cassette_item.label
+                    exif_dict["0th"][piexif.ImageIFD.ImageDescription] = (
+                        cassette_item.label
+                    )
 
             if cassette_item.name:
                 if hasattr(piexif.ImageIFD, "Copyright"):
-                    exif_dict["0th"][
-                        piexif.ImageIFD.Copyright
-                    ] = f"Cassette: {cassette_item.name}"
-
-            if cassette_item.stars and 1 <= cassette_item.stars <= 5:
-                if hasattr(piexif.ExifIFD, "Rating"):
-                    exif_dict["Exif"][piexif.ExifIFD.Rating] = cassette_item.stars
+                    exif_dict["0th"][piexif.ImageIFD.Copyright] = (
+                        f"Cassette: {cassette_item.name}"
+                    )
 
             # Convert and save
             exif_bytes = piexif.dump(exif_dict)
@@ -319,9 +315,6 @@ def get_star_rating_from_exif(image_data: bytes) -> Optional[int]:
     try:
         # Try using Pillow first
         try:
-            from PIL import Image
-            from PIL.ExifTags import TAGS
-
             image = Image.open(io.BytesIO(image_data))
             if hasattr(image, "getexif"):
                 exif_dict = image.getexif()
@@ -332,21 +325,6 @@ def get_star_rating_from_exif(image_data: bytes) -> Optional[int]:
                         if tag_id in exif_dict:
                             rating = exif_dict[tag_id]
                             return rating if 1 <= rating <= 5 else None
-        except ImportError:
-            pass
-
-        # Try using piexif
-        try:
-            import piexif
-
-            exif_dict = piexif.load(image_data)
-
-            if hasattr(
-                piexif.ExifIFD, "Rating"
-            ) and piexif.ExifIFD.Rating in exif_dict.get("Exif", {}):
-                rating = exif_dict["Exif"][piexif.ExifIFD.Rating]
-                return rating if 1 <= rating <= 5 else None
-
         except ImportError:
             pass
 

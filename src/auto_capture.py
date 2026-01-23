@@ -74,14 +74,17 @@ class AutoCaptureManager(GObject.GObject):
             if self.last_captured_image is not None:
                 if (
                     self._calculate_frame_similarity(
-                        frame_data, self.last_captured_image
+                        frame_data,
+                        self.last_captured_image,
                     )
                     >= self.stability_threshold
                 ):
+                    # The last image we captured is very similar to this one,
+                    # so we are going to keep waiting until this has reset
                     return False
                 else:
-                    # We have a captured image that is not similar to our
-                    # prior image, so we're gonna reset
+                    # We have a processed image that is not similar to our
+                    # prior captured image, so we're gonna reset
                     self.last_captured_image = None
                     self.prior_frames = [frame_data]
                     return False
@@ -95,6 +98,7 @@ class AutoCaptureManager(GObject.GObject):
 
             # The image is both sufficiently dissimilar to the last capture, and we also
             # are presently stable
+            self.last_captured_image = frame_data
             return True
 
     def _calculate_frame_similarity(
