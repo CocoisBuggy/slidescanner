@@ -18,7 +18,7 @@ if __name__ == "__main__":
     logging.getLogger("matplotlib.font_manager").setLevel(logging.WARN)
 
     logging.basicConfig(
-        level=logging.DEBUG if "--verbose" in sys.argv else logging.INFO,
+        level=logging.DEBUG,
         format="[%(levelname)s] %(message)s",
         stream=sys.stdout,
     )

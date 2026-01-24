@@ -91,6 +91,12 @@ class CassetteInfo(Gtk.Frame):
 
         cassette_name_entry = Gtk.Entry()
         cassette_name_entry.set_placeholder_text("e.g., Russia, 1994")
+        state.cassette.bind_property(
+            "name",
+            cassette_name_entry,
+            "text",
+            GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE,
+        )
         cassette_name_box.append(cassette_name_entry)
 
         cassette_box.append(DateWithStatus(state.cassette))
