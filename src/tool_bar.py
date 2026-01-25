@@ -43,7 +43,7 @@ def create_toolbar(state: SharedState, shortcuts_handler: ShortcutsHandler):
     battery_label = Gtk.Label(label="Battery: --%")
     toolbar.append(battery_label)
     state.connect(
-        "notify::battery_level",
+        "notify::battery-level",
         lambda obj, pspec: battery_label.set_text(f"Battery: {obj.battery_level}%"),
     )
 

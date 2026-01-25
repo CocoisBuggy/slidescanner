@@ -90,14 +90,14 @@ class LiveView(Gtk.Frame):
                 data = self.state.camera.download_evf_image()
 
                 # Process for auto-capture if enabled
+                should_capture = self.state.auto_capture_manager.process_frame(data)
+
                 if (
                     self.state.auto_capture_manager.enabled
-                    and self.state.auto_capture_manager is not None
+                    and should_capture
+                    and get_current_photo_request() is None
                 ):
-                    should_capture = self.state.auto_capture_manager.process_frame(data)
-
-                    if should_capture and get_current_photo_request() is None:
-                        self._trigger_capture()
+                    self._trigger_capture()
 
                 GLib.idle_add(self.update_live_view_image, data)
             except CameraException as e:
