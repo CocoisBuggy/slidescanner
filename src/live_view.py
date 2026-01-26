@@ -1,3 +1,4 @@
+from enum import Enum, auto
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -20,10 +21,17 @@ from .common_signal import SignalName
 from .shared_state import SharedState
 
 
+class LiveViewState(Enum):
+    Idle = auto()
+    Focusing = auto()
+    ShutterDown = auto()
+
+
 class LiveView(Gtk.Frame):
     state: SharedState
     live_view_running = False
     live_view_thread: Thread | None = None
+    live_view_state = LiveViewState.Idle
 
     def __init__(self, state: SharedState):
         super().__init__()
@@ -51,6 +59,17 @@ class LiveView(Gtk.Frame):
             SignalName.LiveViewStarting.name,
             lambda *_: self.show_loading(),
         )
+
+        self.state_hoc(SignalName.TakePictureError, LiveViewState.Idle)
+        self.state_hoc(SignalName.ImageDownloaded, LiveViewState.Idle)
+        self.state_hoc(SignalName.ShutterRelease, LiveViewState.ShutterDown)
+        self.state_hoc(SignalName.Focusing, LiveViewState.Focusing)
+
+    def state_hoc(self, signal: SignalName, state: LiveViewState):
+        def cb(_):
+            self.live_view_state = state
+
+        self.state.connect(signal.name, cb)
 
     def show_loading(self):
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
