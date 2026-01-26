@@ -65,9 +65,17 @@ class LiveView(Gtk.Frame):
         self.state_hoc(SignalName.ShutterRelease, LiveViewState.ShutterDown)
         self.state_hoc(SignalName.Focusing, LiveViewState.Focusing)
 
+        # Add CSS provider for focusing animation
+        self.css_provider = Gtk.CssProvider()
+        self.style_context = self.get_style_context()
+        self.style_context.add_provider(
+            self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
     def state_hoc(self, signal: SignalName, state: LiveViewState):
         def cb(_):
             self.live_view_state = state
+            self.update_focusing_style()
 
         self.state.connect(signal.name, cb)
 
@@ -194,6 +202,56 @@ class LiveView(Gtk.Frame):
             width * channels,  # New rowstride (no padding needed here)
             destroy_fn=None,
         )
+
+    def update_focusing_style(self):
+        """Update CSS styling based on focusing state."""
+        if self.live_view_state == LiveViewState.Focusing:
+            css_data = """
+                frame {
+                    outline: 3px solid #ff6b35;
+                    outline-offset: 2px;
+                    border-radius: 4px;
+                    animation: pulse 1.5s ease-in-out infinite, fadeIn 0.3s ease-out;
+                    box-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
+                }
+                
+                @keyframes pulse {
+                    0% { 
+                        box-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
+                        outline-color: #ff6b35;
+                    }
+                    50% { 
+                        box-shadow: 0 0 30px rgba(255, 107, 53, 0.9);
+                        outline-color: #ff8c5a;
+                    }
+                    100% { 
+                        box-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
+                        outline-color: #ff6b35;
+                    }
+                }
+                
+                @keyframes fadeIn {
+                    0% {
+                        outline-color: rgba(255, 107, 53, 0);
+                        box-shadow: 0 0 0 rgba(255, 107, 53, 0);
+                    }
+                    100% {
+                        outline-color: rgba(255, 107, 53, 1);
+                        box-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
+                    }
+                }
+            """
+            self.css_provider.load_from_data(css_data.encode())
+        else:
+            # Remove the focusing animation when not focusing
+            css_data = """
+                frame {
+                    outline: none;
+                    box-shadow: none;
+                    animation: none;
+                }
+            """
+            self.css_provider.load_from_data(css_data.encode())
 
     def on_auto_capture_disabled(self):
         """Called when auto-capture is disabled."""
