@@ -75,6 +75,7 @@ class LiveView(Gtk.Frame):
     def state_hoc(self, signal: SignalName, state: LiveViewState):
         def cb(_):
             self.live_view_state = state
+            log.info(f"State changed to: {state}")
             self.update_focusing_style()
 
         self.state.connect(signal.name, cb)
@@ -242,6 +243,51 @@ class LiveView(Gtk.Frame):
                 }
             """
             self.css_provider.load_from_data(css_data.encode())
+        elif self.live_view_state == LiveViewState.ShutterDown:
+            css_data = """
+                frame {
+                    background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(100, 200, 255, 0.8) 50%, rgba(0, 150, 255, 0.6) 100%) !important;
+                    outline: 8px solid #00d4ff !important;
+                    outline-offset: 3px !important;
+                    box-shadow: 0 0 40px rgba(0, 212, 255, 0.8), inset 0 0 30px rgba(255, 255, 255, 0.9) !important;
+                    filter: brightness(1.5) saturate(1.3) !important;
+                    animation: shutterFlash 0.7s ease-out forwards;
+                }
+                
+                @keyframes shutterFlash {
+                    0% {
+                        background: radial-gradient(circle, rgba(255, 255, 255, 0) 0%, rgba(100, 200, 255, 0) 50%, rgba(0, 150, 255, 0) 100%) !important;
+                        outline-color: rgba(0, 212, 255, 0) !important;
+                        box-shadow: 0 0 0 rgba(0, 212, 255, 0), inset 0 0 0 rgba(255, 255, 255, 0) !important;
+                        filter: brightness(1) saturate(1) !important;
+                        transform: scale(1);
+                    }
+                    25% {
+                        background: radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(150, 220, 255, 0.9) 50%, rgba(0, 180, 255, 0.8) 100%) !important;
+                        outline-color: rgba(0, 212, 255, 1) !important;
+                        box-shadow: 0 0 60px rgba(0, 212, 255, 1), inset 0 0 40px rgba(255, 255, 255, 1) !important;
+                        filter: brightness(1.8) saturate(1.5) !important;
+                        transform: scale(1.05);
+                    }
+                    60% {
+                        background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, rgba(100, 200, 255, 0.4) 50%, rgba(0, 150, 255, 0.3) 100%) !important;
+                        outline-color: rgba(0, 212, 255, 0.5) !important;
+                        box-shadow: 0 0 20px rgba(0, 212, 255, 0.4), inset 0 0 15px rgba(255, 255, 255, 0.4) !important;
+                        filter: brightness(1.2) saturate(1.1) !important;
+                        transform: scale(1.02);
+                    }
+                    100% {
+                        background: radial-gradient(circle, rgba(255, 255, 255, 0) 0%, rgba(100, 200, 255, 0) 50%, rgba(0, 150, 255, 0) 100%) !important;
+                        outline-color: rgba(0, 212, 255, 0) !important;
+                        box-shadow: 0 0 0 rgba(0, 212, 255, 0), inset 0 0 0 rgba(255, 255, 255, 0) !important;
+                        filter: brightness(1) saturate(1) !important;
+                        transform: scale(1);
+                    }
+                }
+            """
+            self.css_provider.load_from_data(css_data.encode())
+            # Clear the animation after it completes
+            GLib.timeout_add(700, lambda: self.clear_shutter_animation())
         else:
             # Remove the focusing animation when not focusing with fadeOut
             css_data = """
@@ -260,6 +306,18 @@ class LiveView(Gtk.Frame):
                         outline-color: rgba(255, 107, 53, 0);
                         box-shadow: 0 0 0 rgba(255, 107, 53, 0);
                     }
+                }
+            """
+            self.css_provider.load_from_data(css_data.encode())
+
+    def clear_shutter_animation(self):
+        """Clear the shutter animation after it completes."""
+        if self.live_view_state != LiveViewState.ShutterDown:
+            css_data = """
+                frame {
+                    background-color: transparent;
+                    box-shadow: none;
+                    animation: none;
                 }
             """
             self.css_provider.load_from_data(css_data.encode())
