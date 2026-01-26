@@ -62,7 +62,8 @@ class LiveView(Gtk.Frame):
 
         self.state_hoc(SignalName.TakePictureError, LiveViewState.Idle)
         self.state_hoc(SignalName.ImageDownloaded, LiveViewState.Idle)
-        self.state_hoc(SignalName.ShutterRelease, LiveViewState.ShutterDown)
+        self.state_hoc(SignalName.ShutterRelease, LiveViewState.Idle)
+        self.state_hoc(SignalName.ShutterDown, LiveViewState.ShutterDown)
         self.state_hoc(SignalName.Focusing, LiveViewState.Focusing)
 
         # Add CSS provider for focusing animation
@@ -246,40 +247,24 @@ class LiveView(Gtk.Frame):
         elif self.live_view_state == LiveViewState.ShutterDown:
             css_data = """
                 frame {
-                    background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(100, 200, 255, 0.8) 50%, rgba(0, 150, 255, 0.6) 100%) !important;
-                    outline: 8px solid #00d4ff !important;
-                    outline-offset: 3px !important;
-                    box-shadow: 0 0 40px rgba(0, 212, 255, 0.8), inset 0 0 30px rgba(255, 255, 255, 0.9) !important;
-                    filter: brightness(1.5) saturate(1.3) !important;
-                    animation: shutterFlash 0.7s ease-out forwards;
+                    box-shadow: 0 0 30px rgba(100, 200, 255, 0.7), inset 0 0 20px rgba(255, 255, 255, 0.8) !important;
+                    filter: brightness(1.4) saturate(1.2) !important;
+                    animation: shutterFlash 0.5s ease-out forwards;
                 }
                 
                 @keyframes shutterFlash {
                     0% {
-                        background: radial-gradient(circle, rgba(255, 255, 255, 0) 0%, rgba(100, 200, 255, 0) 50%, rgba(0, 150, 255, 0) 100%) !important;
-                        outline-color: rgba(0, 212, 255, 0) !important;
-                        box-shadow: 0 0 0 rgba(0, 212, 255, 0), inset 0 0 0 rgba(255, 255, 255, 0) !important;
+                        box-shadow: 0 0 0 rgba(100, 200, 255, 0), inset 0 0 0 rgba(255, 255, 255, 0) !important;
                         filter: brightness(1) saturate(1) !important;
                         transform: scale(1);
                     }
-                    25% {
-                        background: radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(150, 220, 255, 0.9) 50%, rgba(0, 180, 255, 0.8) 100%) !important;
-                        outline-color: rgba(0, 212, 255, 1) !important;
-                        box-shadow: 0 0 60px rgba(0, 212, 255, 1), inset 0 0 40px rgba(255, 255, 255, 1) !important;
-                        filter: brightness(1.8) saturate(1.5) !important;
-                        transform: scale(1.05);
-                    }
-                    60% {
-                        background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, rgba(100, 200, 255, 0.4) 50%, rgba(0, 150, 255, 0.3) 100%) !important;
-                        outline-color: rgba(0, 212, 255, 0.5) !important;
-                        box-shadow: 0 0 20px rgba(0, 212, 255, 0.4), inset 0 0 15px rgba(255, 255, 255, 0.4) !important;
-                        filter: brightness(1.2) saturate(1.1) !important;
-                        transform: scale(1.02);
+                    30% {
+                        box-shadow: 0 0 40px rgba(100, 200, 255, 0.9), inset 0 0 25px rgba(255, 255, 255, 0.9) !important;
+                        filter: brightness(1.6) saturate(1.3) !important;
+                        transform: scale(1.01);
                     }
                     100% {
-                        background: radial-gradient(circle, rgba(255, 255, 255, 0) 0%, rgba(100, 200, 255, 0) 50%, rgba(0, 150, 255, 0) 100%) !important;
-                        outline-color: rgba(0, 212, 255, 0) !important;
-                        box-shadow: 0 0 0 rgba(0, 212, 255, 0), inset 0 0 0 rgba(255, 255, 255, 0) !important;
+                        box-shadow: 0 0 0 rgba(100, 200, 255, 0), inset 0 0 0 rgba(255, 255, 255, 0) !important;
                         filter: brightness(1) saturate(1) !important;
                         transform: scale(1);
                     }
@@ -287,7 +272,7 @@ class LiveView(Gtk.Frame):
             """
             self.css_provider.load_from_data(css_data.encode())
             # Clear the animation after it completes
-            GLib.timeout_add(700, lambda: self.clear_shutter_animation())
+            GLib.timeout_add(500, lambda: self.clear_shutter_animation())
         else:
             # Remove the focusing animation when not focusing with fadeOut
             css_data = """
