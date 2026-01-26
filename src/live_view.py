@@ -243,12 +243,23 @@ class LiveView(Gtk.Frame):
             """
             self.css_provider.load_from_data(css_data.encode())
         else:
-            # Remove the focusing animation when not focusing
+            # Remove the focusing animation when not focusing with fadeOut
             css_data = """
                 frame {
                     outline: none;
                     box-shadow: none;
-                    animation: none;
+                    animation: fadeOut 0.3s ease-out forwards;
+                }
+                
+                @keyframes fadeOut {
+                    0% {
+                        outline-color: rgba(255, 107, 53, 1);
+                        box-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
+                    }
+                    100% {
+                        outline-color: rgba(255, 107, 53, 0);
+                        box-shadow: 0 0 0 rgba(255, 107, 53, 0);
+                    }
                 }
             """
             self.css_provider.load_from_data(css_data.encode())
