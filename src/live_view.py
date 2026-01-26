@@ -43,7 +43,18 @@ class LiveView(Gtk.Frame):
         self.live_view_image.set_hexpand(True)
         self.live_view_image.set_content_fit(Gtk.ContentFit.CONTAIN)
 
-        self.preview_box.append(self.live_view_image)
+        # Create overlay for flash effect
+        self.overlay = Gtk.Overlay()
+        self.overlay.set_child(self.live_view_image)
+
+        # White flash overlay
+        self.flash_overlay = Gtk.Label()
+        self.flash_overlay.set_name("flash-overlay")
+        self.flash_overlay.set_hexpand(True)
+        self.flash_overlay.set_vexpand(True)
+        self.overlay.add_overlay(self.flash_overlay)
+
+        self.preview_box.append(self.overlay)
         self.set_child(self.preview_box)
 
         self.state = state
@@ -71,6 +82,22 @@ class LiveView(Gtk.Frame):
         self.style_context = self.get_style_context()
         self.style_context.add_provider(
             self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+        # Add flash overlay CSS
+        flash_css = """
+            #flash-overlay {
+                background-color: rgba(255, 255, 255, 0);
+                transition: all 0.2s ease-out;
+            }
+            #flash-overlay.flashing {
+                background-color: rgba(255, 255, 255, 1);
+            }
+        """
+        self.flash_css_provider = Gtk.CssProvider()
+        self.flash_css_provider.load_from_data(flash_css.encode())
+        self.flash_overlay.get_style_context().add_provider(
+            self.flash_css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
 
     def state_hoc(self, signal: SignalName, state: LiveViewState):
@@ -245,6 +272,12 @@ class LiveView(Gtk.Frame):
             """
             self.css_provider.load_from_data(css_data.encode())
         elif self.live_view_state == LiveViewState.ShutterDown:
+            # Trigger white flash
+            self.flash_overlay.add_css_class("flashing")
+            GLib.timeout_add(
+                200, lambda: self.flash_overlay.remove_css_class("flashing")
+            )
+
             css_data = """
                 frame {
                     box-shadow: 0 0 30px rgba(100, 200, 255, 0.7), inset 0 0 20px rgba(255, 255, 255, 0.8) !important;
