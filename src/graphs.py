@@ -73,6 +73,8 @@ class StabilityGraph(GraphWidget):
     """A graph widget for displaying stability over time."""
 
     lines: list[Line2D] = []
+    avg: Line2D
+    sim_last: Line2D
     auto_capture: AutoCaptureManager
 
     def __init__(
@@ -101,6 +103,7 @@ class StabilityGraph(GraphWidget):
             for _ in range(self.auto_capture.stability_duration)
         ]
 
+        (self.sim_last,) = self.ax.plot([], [])
         (self.avg,) = self.ax.plot([], [])
 
         # Initialize empty plot
@@ -133,6 +136,11 @@ class StabilityGraph(GraphWidget):
         self.avg.set_data(
             list(range(len(stability_data))),
             list([np.mean(x) for x in stability_data]),
+        )
+
+        self.sim_last.set_data(
+            list(range(len(self.auto_capture._last_capture_similarity))),
+            self.auto_capture._last_capture_similarity,
         )
         # Auto-scale y-axis to ensure line is visible
         self.ax.relim()

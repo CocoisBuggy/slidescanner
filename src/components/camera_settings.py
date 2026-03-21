@@ -2,8 +2,10 @@ import logging
 from gi.repository import Gtk
 from typing_extensions import Callable
 
+
 log = logging.getLogger(__name__)
 
+from src.components.exposure_hist import ExposureHist
 from src.camera import Camera
 from src.camera_core.properties import (
     EdsPropertyIDEnum,
@@ -67,29 +69,37 @@ class CameraSettings(Gtk.Frame):
 
     def create_controls_box(self):
         """Create the controls frame with ISO and shutter speed settings."""
-        controls_box = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL, spacing=INNER_PADDING
+        outerbox = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL, spacing=INNER_PADDING // 3
         )
-        controls_box.set_margin_top(INNER_PADDING)
-        controls_box.set_margin_bottom(INNER_PADDING)
-        controls_box.set_margin_start(INNER_PADDING)
-        controls_box.set_margin_end(INNER_PADDING)
-        self.set_child(controls_box)
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=INNER_PADDING)
+        box.set_margin_top(INNER_PADDING)
+        box.set_margin_bottom(INNER_PADDING)
+        box.set_margin_start(INNER_PADDING)
+        box.set_margin_end(INNER_PADDING)
 
         # ISO
         iso_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         iso_box.append(Gtk.Label(label="ISO:"))
         iso_box.append(self.iso_label)
-        controls_box.append(iso_box)
+        box.append(iso_box)
 
         # Shutter Speed
         shutter_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         shutter_box.append(Gtk.Label(label="Shutter:"))
         shutter_box.append(self.shutter_label)
-        controls_box.append(shutter_box)
+        box.append(shutter_box)
 
         # Aperture
         aperture_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         aperture_box.append(Gtk.Label(label="Aperture:"))
         aperture_box.append(self.aperture_label)
-        controls_box.append(aperture_box)
+        box.append(aperture_box)
+
+        graph = ExposureHist(self.state.auto_capture_manager)
+        graph.set_margin_top(8)
+        graph.set_margin_bottom(4)
+
+        outerbox.append(box)
+        outerbox.append(graph)
+        self.set_child(outerbox)

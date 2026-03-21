@@ -2,18 +2,24 @@ import contextlib
 from gi.repository import GObject
 import numpy as np
 import cv2
+from skimage import io as skio, color
+import io
 
 
 class AutoCaptureManager(GObject.GObject):
     """Manages auto-capture functionality with image stability detection."""
 
+    _max = 100
+    _stability_history: list[list[float]] = []
+    _last_capture_similarity: list[float] = []
+    _histogram_data = []
     _enabled: bool = False  # Auto capture toggle state
 
     stability_threshold: float
     stability_duration: int
     prior_frames: list = []
     total_frames_processed = 0
-    _stability_history: list[list[float]] = []
+
     last_captured_image: bytes | None = None
     stability_duration: int = 12
 
@@ -53,11 +59,33 @@ class AutoCaptureManager(GObject.GObject):
         yield  # Do something with the frame
 
         # Capture the frame stuff
-        self.prior_frames.append(frame_data)
         self.total_frames_processed += 1
+        self.prior_frames.append(frame_data)
+        img = cv2.imdecode(
+            np.frombuffer(
+                frame_data,
+                dtype=np.uint8,
+            ),
+            cv2.IMREAD_COLOR,
+        )
+
+        if img is None:
+            raise Exception("KAK KAKK KAKKKKK")
+
+        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        self._histogram_data = gray_img.flatten()
+
+        if self.last_captured_image is not None:
+            self._last_capture_similarity.append(
+                self._calculate_frame_similarity(frame_data, self.last_captured_image)
+            )
+        else:
+            self._last_capture_similarity.append(0)
 
         if len(self.prior_frames) > self.stability_duration:
             self.prior_frames.pop(0)
+            self._last_capture_similarity.pop(0)
 
     def process_frame(self, frame_data: bytes) -> bool:
         """
@@ -71,30 +99,23 @@ class AutoCaptureManager(GObject.GObject):
         """
 
         with self.frame_context(frame_data):
-            if self.last_captured_image is not None:
-                if (
-                    self._calculate_frame_similarity(
-                        frame_data,
-                        self.last_captured_image,
-                    )
-                    >= self.stability_threshold
-                ):
-                    # The last image we captured is very similar to this one,
-                    # so we are going to keep waiting until this has reset
-                    return False
-                else:
-                    # We have a processed image that is not similar to our
-                    # prior captured image, so we're gonna reset
-                    self.last_captured_image = None
-                    self.prior_frames = [frame_data]
-                    return False
-
             if not self._is_image_stable(frame_data):
                 # The image is not stable
                 return False
 
             if len(self.prior_frames) < self.stability_duration:
                 return False
+
+            if self.last_captured_image is not None:
+                similarity_to_last_capture = self._calculate_frame_similarity(
+                    frame_data,
+                    self.last_captured_image,
+                )
+
+                if similarity_to_last_capture >= self.stability_threshold:
+                    # The last image we captured is very similar to this one,
+                    # so we are going to keep waiting until this has reset
+                    return False
 
             # The image is both sufficiently dissimilar to the last capture, and we also
             # are presently stable
@@ -173,6 +194,6 @@ class AutoCaptureManager(GObject.GObject):
         if len(self._stability_history) > 50:
             self._stability_history.pop(0)
 
-        similarity = np.average(previous_similarities)
+        similarity = np.min(previous_similarities)
         self.notify("stability-history")
         return bool(similarity >= self.stability_threshold)

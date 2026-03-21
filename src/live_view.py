@@ -27,6 +27,17 @@ class LiveViewState(Enum):
     ShutterDown = auto()
 
 
+flash_css = """
+    #flash-overlay {
+        background-color: rgba(255, 255, 255, 0);
+        transition: all 0.2s ease-out;
+    }
+    #flash-overlay.flashing {
+        background-color: rgba(255, 255, 255, 1);
+    }
+"""
+
+
 class LiveView(Gtk.Frame):
     state: SharedState
     live_view_running = False
@@ -85,15 +96,6 @@ class LiveView(Gtk.Frame):
         )
 
         # Add flash overlay CSS
-        flash_css = """
-            #flash-overlay {
-                background-color: rgba(255, 255, 255, 0);
-                transition: all 0.2s ease-out;
-            }
-            #flash-overlay.flashing {
-                background-color: rgba(255, 255, 255, 1);
-            }
-        """
         self.flash_css_provider = Gtk.CssProvider()
         self.flash_css_provider.load_from_data(flash_css.encode())
         self.flash_overlay.get_style_context().add_provider(
